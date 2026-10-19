@@ -3,6 +3,7 @@
 namespace Symbiote\AdvancedWorkflow\Actions;
 
 use SilverStripe\Control\Email\Email;
+use SilverStripe\Core\Convert;
 use SilverStripe\Forms\HeaderField;
 use SilverStripe\Forms\LiteralField;
 use SilverStripe\Forms\TextareaField;
@@ -11,10 +12,9 @@ use SilverStripe\Forms\ToggleCompositeField;
 use SilverStripe\ORM\CMSPreviewable;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
+use SilverStripe\ORM\FieldType\DBField;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Security;
-use SilverStripe\View\ArrayData;
-use SilverStripe\View\SSViewer;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowAction;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowInstance;
 use Symfony\Component\Mime\Exception\RfcComplianceException;
@@ -31,6 +31,7 @@ class NotifyUsersWorkflowAction extends WorkflowAction
     /**
      * @config
      * @var bool Should templates be constrained to just known-safe variables.
+     * @deprecated 6.4.0 Will be removed without equivalent functionality to replace it in a future major release.
      */
     private static $whitelist_template_variables = false;
 
@@ -115,38 +116,25 @@ class NotifyUsersWorkflowAction extends WorkflowAction
             'Now' => DBDatetime::now()
         ])->renderWith('Includes/CommentHistory');
 
-        $from = str_replace(array_keys($variables ?? []), array_values($variables ?? []), $this->EmailFrom ?? '');
-        $subject = str_replace(array_keys($variables ?? []), array_values($variables ?? []), $this->EmailSubject ?? '');
-
-        if ($this->config()->get('whitelist_template_variables')) {
-            $item = ArrayData::create([
-                'Initiator' => ArrayData::create($initiatorFields),
-                'Member' => ArrayData::create($memberFields),
-                'Context' => ArrayData::create($contextFields),
-                'CommentHistory' => $variables["\$CommentHistory"]
-            ]);
-        } else {
-            $item = $workflow->customise([
-                'Items' => $workflow->Actions(),
-                'Member' => $member,
-                'Context' => ArrayData::create($contextFields),
-                'CommentHistory' => $variables["\$CommentHistory"]
-            ]);
+        // Let developers add their own notification variables (substituted as literal text, not evaluated)
+        $customVariables = [];
+        $this->extend('updateNotificationVariables', $customVariables, $workflow);
+        foreach ($customVariables as $name => $value) {
+            $variables[$name] = $value;
         }
 
-
-        $view = SSViewer::fromString($this->EmailTemplate);
-        $this->extend('updateView', $view);
+        // Subject and from address are plain-text headers, so their values are substituted unescaped.
+        $from = $this->replaceVariables($this->EmailFrom ?? '', $variables, false);
+        $subject = $this->replaceVariables($this->EmailSubject ?? '', $variables, false);
 
         foreach ($members as $member) {
             if ($member->Email) {
                 // We bind in the assignee at this point, as it changes each loop iteration
-                $assigneeVars = $this->getMemberFields($member);
-                if (count($assigneeVars ?? [])) {
-                    $item->Assignee = ArrayData::create($assigneeVars);
+                $replacements = $variables;
+                foreach ($this->getMemberFields($member) as $field => $val) {
+                    $replacements["\$Assignee.$field"] = $val;
                 }
-
-                $body = $view->process($item);
+                $body = $this->replaceVariables($this->EmailTemplate ?? '', $replacements);
 
                 $email = Email::create();
                 try {
@@ -164,6 +152,35 @@ class NotifyUsersWorkflowAction extends WorkflowAction
         }
 
         return true;
+    }
+
+    /**
+     * Substitute the known notification variables into author-controlled content as literal text,
+     * never evaluating it as a template. With $escape each value is cast to its safe HTML form,
+     * matching the escaping the template engine used to apply to the email body.
+     *
+     * @param array<string, mixed> $variables
+     */
+    private function replaceVariables(string $content, array $variables, bool $escape = true): string
+    {
+        // Match a whole $Name or {$Name} token (including dotted names) so a known variable can never
+        // replace the prefix of a longer unknown one, and inserted values are never re-scanned.
+        $token = '[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*';
+        return preg_replace_callback(
+            '/\{\$(' . $token . ')\}|\$(' . $token . ')/',
+            function (array $matches) use ($variables, $escape): string {
+                $name = '$' . (($matches[1] ?? '') !== '' ? $matches[1] : $matches[2]);
+                if (!array_key_exists($name, $variables)) {
+                    return $matches[0];
+                }
+                $value = $variables[$name];
+                if (!$escape) {
+                    return (string) $value;
+                }
+                return $value instanceof DBField ? (string) $value->forTemplate() : Convert::raw2xml((string) $value);
+            },
+            $content
+        ) ?? '';
     }
 
     /**
