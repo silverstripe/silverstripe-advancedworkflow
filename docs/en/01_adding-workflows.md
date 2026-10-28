@@ -21,11 +21,4 @@ App\ModelAdmins\MyObjectAdmin:
     - 'Symbiote\AdvancedWorkflow\Extensions\AdvancedWorkflowExtension'
 ```
 
-We strongly recommend also setting the [`NotifyUsersWorkflowAction`](api:Symbiote\AdvancedWorkflow\Actions\NotifyUsersWorkflowAction) configuration parameter [`NotifyUsersWorkflowAction.whitelist_template_variables`](api:Symbiote\AdvancedWorkflow\Actions\NotifyUsersWorkflowAction->whitelist_template_variables) to true on new projects. This configuration will achieve this:
-
-```yml
-Symbiote\AdvancedWorkflow\Actions\NotifyUsersWorkflowAction:
-  whitelist_template_variables: true
-```
-
-See the [Security](./04_security.md) section for more details.
+Notification emails sent by a [`NotifyUsersWorkflowAction`](api:Symbiote\AdvancedWorkflow\Actions\NotifyUsersWorkflowAction) substitute a known set of variables and never evaluate their content as a template. See the [Security](./04_security.md) section for more details.
