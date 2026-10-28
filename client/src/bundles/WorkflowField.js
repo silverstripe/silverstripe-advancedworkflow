@@ -25,7 +25,21 @@ jQuery.entwine('workflow', ($) => {
       });
 
       this.getDialog().on('submit', 'form', (event) => {
-        $(event.currentTarget).ajaxSubmit((response) => {
+        const form = event.currentTarget;
+        const data = new FormData(form);
+        // Include the button that submitted the form, which tells the form handler which action to run
+        const { submitter } = event.originalEvent || {};
+        if (submitter && submitter.name) {
+          data.append(submitter.name, submitter.value);
+        }
+
+        $.ajax({
+          url: form.action,
+          type: form.method || 'POST',
+          data,
+          processData: false,
+          contentType: false,
+        }).done((response) => {
           if ($(response).is('.workflow-field')) {
             self.getDialog().empty().dialog('close');
             self.replaceWith(response);
