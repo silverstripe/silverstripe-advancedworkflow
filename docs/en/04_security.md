@@ -1,18 +1,19 @@
 ---
 title: Security
-summary: Ehance security by restricting accessible parameters in email templates.
+summary: How notification email content is handled safely.
 icon: user-shield
 ---
 
 # Security
 
+## Notification email content is not evaluated as a template
+
+The subject, from address and body of a [`NotifyUsersWorkflowAction`](api:Symbiote\AdvancedWorkflow\Actions\NotifyUsersWorkflowAction) are edited in the CMS. These fields substitute a known set of variables, such as `$Member.FirstName`, `$Context.Title` and `$CommentHistory`, and leave everything else as literal text.
+
+The content is never run through the template engine, so template syntax a CMS author enters stays inert text rather than executing on the server. See [adding workflows](./01_adding-workflows.md) for the full list of available variables and how to register your own.
+
 ## `whitelist_template_variables`
 
-The [`NotifyUsersWorkflowAction`](api:Symbiote\AdvancedWorkflow\Actions\NotifyUsersWorkflowAction) workflow action has a configuration parameter, `whitelist_template_variables`.
-Currently this variable defaults to false in order to retain backwards compatibility. In a future major release it will
-be changed to default to true.
+The [`NotifyUsersWorkflowAction`](api:Symbiote\AdvancedWorkflow\Actions\NotifyUsersWorkflowAction) workflow action has a configuration parameter, `whitelist_template_variables`, that has no effect.
 
-Setting this configuration variable to true will limit template variables available in the email template sent as part
-of the notify users action to a known-safe whitelist. When it is false, the template may reference any accessible parameter.
-As this template is editable in the CMS, whitelisting these parameters ensures CMS admins can not bypass data access
-restrictions.
+The email body is not evaluated as a template, so it is always limited to the known variables regardless of this setting. Remove any `whitelist_template_variables` configuration from your project.
