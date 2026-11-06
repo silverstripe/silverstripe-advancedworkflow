@@ -50,10 +50,12 @@ class WorkflowStatusService
             return null;
         }
 
-        $isFinished = in_array($instance->WorkflowStatus, [self::STATUS_COMPLETE, self::STATUS_CANCELLED], true);
+        $isFinished = in_array($instance->WorkflowStatus, [WorkflowStatusService::STATUS_COMPLETE, WorkflowStatusService::STATUS_CANCELLED], true);
         $executedActionIds = $this->getExecutedActionIds($instance);
         $isRejected = $isFinished && $this->wasRejected($instance);
-        $isPublished = $isFinished && !$isRejected && $this->wasPublishedAfterWorkflow($targetId, $targetClass, $instance);
+        $isPublished = $isFinished
+            && !$isRejected
+            && $this->wasPublishedAfterWorkflow($targetId, $targetClass, $instance);
 
         $actions = $definition->Actions()->sort('Sort');
         $phases = $this->buildPhases($actions, $currentAction, $executedActionIds, $isFinished, $isRejected);
@@ -80,7 +82,11 @@ class WorkflowStatusService
         $allowCommenting = false;
         $hasTransitions = !empty($transitions['next']) || !empty($transitions['back']);
 
-        if (!$isFinished && $hasTransitions && $currentAction instanceof WorkflowActionInstance && $currentAction->exists()) {
+        if (!$isFinished
+            && $hasTransitions
+            && $currentAction instanceof WorkflowActionInstance
+            && $currentAction->exists()
+        ) {
             $baseAction = $currentAction->BaseAction();
 
             if ($baseAction instanceof WorkflowAction && $baseAction->exists()) {
@@ -228,7 +234,7 @@ class WorkflowStatusService
             ]);
         }
 
-        $members = $members->sort('FirstName')->limit(self::USER_SEARCH_LIMIT);
+        $members = $members->sort('FirstName')->limit(WorkflowStatusService::USER_SEARCH_LIMIT);
         $results = [];
 
         foreach ($members as $member) {
@@ -513,7 +519,10 @@ class WorkflowStatusService
      *
      * @return array{next: array<int, array<string, mixed>>, back: array<int, array<string, mixed>>}
      */
-    private function classifyTransitions(?WorkflowActionInstance $currentAction, ?WorkflowInstance $instance = null): array
+    private function classifyTransitions(
+        ?WorkflowActionInstance $currentAction,
+        ?WorkflowInstance $instance = null
+    ): array
     {
         $next = [];
         $back = [];
@@ -636,7 +645,7 @@ class WorkflowStatusService
                 'Finished' => 1,
             ])
             ->sort('Created', 'DESC')
-            ->limit(self::HISTORY_LIMIT);
+            ->limit(WorkflowStatusService::HISTORY_LIMIT);
 
         $history = [];
 

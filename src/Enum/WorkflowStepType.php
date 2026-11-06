@@ -37,13 +37,13 @@ enum WorkflowStepType: string
     public function actionClass(): string
     {
         return match ($this) {
-            self::Approval => SimpleApprovalWorkflowAction::class,
-            self::Notification => NotifyUsersWorkflowAction::class,
-            self::Publish => PublishItemWorkflowAction::class,
-            self::Unpublish => UnpublishItemWorkflowAction::class,
-            self::Assign => AssignUsersToWorkflowAction::class,
-            self::SetProperty => SetPropertyWorkflowAction::class,
-            self::Cancel => CancelWorkflowAction::class,
+            WorkflowStepType::Approval => SimpleApprovalWorkflowAction::class,
+            WorkflowStepType::Notification => NotifyUsersWorkflowAction::class,
+            WorkflowStepType::Publish => PublishItemWorkflowAction::class,
+            WorkflowStepType::Unpublish => UnpublishItemWorkflowAction::class,
+            WorkflowStepType::Assign => AssignUsersToWorkflowAction::class,
+            WorkflowStepType::SetProperty => SetPropertyWorkflowAction::class,
+            WorkflowStepType::Cancel => CancelWorkflowAction::class,
         };
     }
 
@@ -53,13 +53,13 @@ enum WorkflowStepType: string
     public function label(): string
     {
         return match ($this) {
-            self::Approval => 'Approval',
-            self::Notification => 'Notification',
-            self::Publish => 'Publish',
-            self::Unpublish => 'Unpublish',
-            self::Assign => 'Assign Users',
-            self::SetProperty => 'Set Property',
-            self::Cancel => 'Reject / Cancel',
+            WorkflowStepType::Approval => 'Approval',
+            WorkflowStepType::Notification => 'Notification',
+            WorkflowStepType::Publish => 'Publish',
+            WorkflowStepType::Unpublish => 'Unpublish',
+            WorkflowStepType::Assign => 'Assign Users',
+            WorkflowStepType::SetProperty => 'Set Property',
+            WorkflowStepType::Cancel => 'Reject / Cancel',
         };
     }
 
@@ -69,7 +69,7 @@ enum WorkflowStepType: string
      */
     public function supportsBranches(): bool
     {
-        return $this === self::Approval;
+        return $this === WorkflowStepType::Approval;
     }
 
     /**
@@ -77,7 +77,7 @@ enum WorkflowStepType: string
      */
     public function assignsUsers(): bool
     {
-        return $this === self::Assign;
+        return $this === WorkflowStepType::Assign;
     }
 
     /**
@@ -87,10 +87,10 @@ enum WorkflowStepType: string
      *
      * @param class-string<WorkflowAction>|string $className
      */
-    public static function fromActionClass(string $className): self
+    public static function fromActionClass(string $className): WorkflowStepType
     {
         // Exact match first — cheap and avoids autoloading.
-        foreach (self::cases() as $case) {
+        foreach (WorkflowStepType::cases() as $case) {
             if ($case->actionClass() === $className) {
                 return $case;
             }
@@ -99,13 +99,13 @@ enum WorkflowStepType: string
         // Fall back to inheritance so project-specific subclasses map to their
         // nearest known base type (most specific base classes checked first).
         $bySpecificity = [
-            self::Assign,
-            self::Notification,
-            self::Publish,
-            self::Unpublish,
-            self::SetProperty,
-            self::Cancel,
-            self::Approval,
+            WorkflowStepType::Assign,
+            WorkflowStepType::Notification,
+            WorkflowStepType::Publish,
+            WorkflowStepType::Unpublish,
+            WorkflowStepType::SetProperty,
+            WorkflowStepType::Cancel,
+            WorkflowStepType::Approval,
         ];
 
         foreach ($bySpecificity as $case) {
@@ -114,15 +114,15 @@ enum WorkflowStepType: string
             }
         }
 
-        return self::Approval;
+        return WorkflowStepType::Approval;
     }
 
     /**
      * Resolve a builder step type from its string value, defaulting to Approval
      * for empty or unknown values.
      */
-    public static function fromValue(?string $type): self
+    public static function fromValue(?string $type): WorkflowStepType
     {
-        return self::tryFrom((string)$type) ?? self::Approval;
+        return WorkflowStepType::tryFrom((string)$type) ?? WorkflowStepType::Approval;
     }
 }

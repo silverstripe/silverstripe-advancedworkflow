@@ -35,7 +35,8 @@ class CreateExampleWorkflowTask extends BuildTask
 {
     protected string $title = 'Create Example Workflow Definitions';
 
-    protected static string $description = 'Creates example workflow definitions including a complex two-stage editorial review workflow';
+    protected static string $description = 'Creates example workflow definitions including a complex '
+        . 'two-stage editorial review workflow';
 
     protected static string $commandName = 'CreateExampleWorkflowTask';
 
@@ -58,7 +59,8 @@ class CreateExampleWorkflowTask extends BuildTask
             'properties' => [
                 'EmailSubject' => 'Content review requested: $Title',
                 'EmailFrom' => '',
-                'EmailTemplate' => 'A content review has been requested for "$Title" by $Initiator.Name. Please log in to the CMS to review the changes.',
+                'EmailTemplate' => 'A content review has been requested for "$Title" by $Initiator.Name. '
+                    . 'Please log in to the CMS to review the changes.',
             ],
         ],
         [
@@ -82,7 +84,8 @@ class CreateExampleWorkflowTask extends BuildTask
             'properties' => [
                 'EmailSubject' => 'Editorial sign-off needed: $Title',
                 'EmailFrom' => '',
-                'EmailTemplate' => '"$Title" has passed content review and needs your final sign-off. Please log in to the CMS to approve or reject.',
+                'EmailTemplate' => '"$Title" has passed content review and needs your final sign-off. '
+                    . 'Please log in to the CMS to approve or reject.',
             ],
         ],
         [
@@ -106,7 +109,8 @@ class CreateExampleWorkflowTask extends BuildTask
             'properties' => [
                 'EmailSubject' => 'Content approved: $Title',
                 'EmailFrom' => '',
-                'EmailTemplate' => 'Your content "$Title" has been approved by editorial review. You may now publish the page when ready.',
+                'EmailTemplate' => 'Your content "$Title" has been approved by editorial review. '
+                    . 'You may now publish the page when ready.',
             ],
         ],
         [
@@ -126,7 +130,8 @@ class CreateExampleWorkflowTask extends BuildTask
             'properties' => [
                 'EmailSubject' => 'Content changes rejected: $Title',
                 'EmailFrom' => '',
-                'EmailTemplate' => 'Your content "$Title" has been rejected. Please review the feedback and resubmit when ready.',
+                'EmailTemplate' => 'Your content "$Title" has been rejected. '
+                    . 'Please review the feedback and resubmit when ready.',
             ],
         ],
     ];
@@ -189,22 +194,26 @@ class CreateExampleWorkflowTask extends BuildTask
      */
     private function createTwoStageWorkflow(PolyOutput $output): int
     {
-        $existing = WorkflowDefinition::get()->filter('Title', self::DEFINITION_TITLE)->first();
+        $existing = WorkflowDefinition::get()->filter('Title', CreateExampleWorkflowTask::DEFINITION_TITLE)->first();
 
         if ($existing instanceof WorkflowDefinition && $existing->exists()) {
-            $output->writeln(sprintf('Removing existing "%s" workflow (ID: %d)...', self::DEFINITION_TITLE, $existing->ID));
+            $output->writeln(sprintf(
+                'Removing existing "%s" workflow (ID: %d)...',
+                CreateExampleWorkflowTask::DEFINITION_TITLE,
+                $existing->ID
+            ));
             $this->removeDefinition($existing);
         }
 
         $definition = WorkflowDefinition::create();
-        $definition->Title = self::DEFINITION_TITLE;
+        $definition->Title = CreateExampleWorkflowTask::DEFINITION_TITLE;
         $definition->Description = 'A two-stage editorial workflow: content is first reviewed by Content Reviewers, '
             . 'then requires sign-off from Senior Editors before publishing. '
             . 'Either stage can reject back to the author with feedback.';
         $definition->RemindDays = 3;
         $definition->write();
 
-        $output->writeln(sprintf('Created workflow definition "%s" (ID: %d)', self::DEFINITION_TITLE, $definition->ID));
+        $output->writeln(sprintf('Created workflow definition "%s" (ID: %d)', CreateExampleWorkflowTask::DEFINITION_TITLE, $definition->ID));
 
         $this->attachGroups($definition, $output);
 
@@ -250,7 +259,7 @@ class CreateExampleWorkflowTask extends BuildTask
     {
         $actions = [];
 
-        foreach (self::STEPS as $stepConfig) {
+        foreach (CreateExampleWorkflowTask::STEPS as $stepConfig) {
             $className = $stepConfig['class'];
 
             /** @var WorkflowAction $action */
@@ -268,7 +277,12 @@ class CreateExampleWorkflowTask extends BuildTask
             $action->write();
             $actions[$stepConfig['title']] = $action;
 
-            $output->writeln(sprintf('  Step %d: %s (%s)', $stepConfig['sort'], $stepConfig['title'], $this->shortClassName($className)));
+            $output->writeln(sprintf(
+                '  Step %d: %s (%s)',
+                $stepConfig['sort'],
+                $stepConfig['title'],
+                $this->shortClassName($className)
+            ));
         }
 
         return $actions;
@@ -283,7 +297,7 @@ class CreateExampleWorkflowTask extends BuildTask
     {
         $count = 0;
 
-        foreach (self::TRANSITIONS as $sourceName => $transitionList) {
+        foreach (CreateExampleWorkflowTask::TRANSITIONS as $sourceName => $transitionList) {
             if (!isset($actions[$sourceName])) {
                 $output->writeln(sprintf('  WARNING: Source action "%s" not found, skipping transitions', $sourceName));
                 continue;
@@ -293,7 +307,11 @@ class CreateExampleWorkflowTask extends BuildTask
 
             foreach ($transitionList as [$transitionTitle, $targetName]) {
                 if (!isset($actions[$targetName])) {
-                    $output->writeln(sprintf('  WARNING: Target action "%s" not found for transition "%s"', $targetName, $transitionTitle));
+                    $output->writeln(sprintf(
+                        '  WARNING: Target action "%s" not found for transition "%s"',
+                        $targetName,
+                        $transitionTitle
+                    ));
                     continue;
                 }
 

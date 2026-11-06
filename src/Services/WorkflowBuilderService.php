@@ -570,7 +570,7 @@ class WorkflowBuilderService
      */
     private function configFieldMap(WorkflowStepType $type): array
     {
-        return array_merge(self::BASE_CONFIG_FIELDS, self::TYPE_CONFIG_FIELDS[$type->value] ?? []);
+        return array_merge(WorkflowBuilderService::BASE_CONFIG_FIELDS, WorkflowBuilderService::TYPE_CONFIG_FIELDS[$type->value] ?? []);
     }
 
     /**
@@ -579,11 +579,11 @@ class WorkflowBuilderService
      */
     private function normaliseConfigValue(string $key, $value)
     {
-        if (in_array($key, self::BOOLEAN_CONFIG_KEYS, true)) {
+        if (in_array($key, WorkflowBuilderService::BOOLEAN_CONFIG_KEYS, true)) {
             return (bool)$value;
         }
 
-        if (in_array($key, self::INTEGER_CONFIG_KEYS, true)) {
+        if (in_array($key, WorkflowBuilderService::INTEGER_CONFIG_KEYS, true)) {
             return (int)$value;
         }
 
@@ -596,11 +596,11 @@ class WorkflowBuilderService
      */
     private function denormaliseConfigValue(string $key, $value)
     {
-        if (in_array($key, self::BOOLEAN_CONFIG_KEYS, true)) {
+        if (in_array($key, WorkflowBuilderService::BOOLEAN_CONFIG_KEYS, true)) {
             return (int)(bool)$value;
         }
 
-        if (in_array($key, self::INTEGER_CONFIG_KEYS, true)) {
+        if (in_array($key, WorkflowBuilderService::INTEGER_CONFIG_KEYS, true)) {
             return (int)$value;
         }
 
