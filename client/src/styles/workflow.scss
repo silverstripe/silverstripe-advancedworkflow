@@ -1,0 +1,1718 @@
+@use "sass:color";
+@use "cms-tokens" as *;
+
+// ============================================================
+// Workflow UI Styles
+// BEM naming convention throughout
+// Uses rem units per coding standards
+// ============================================================
+
+// Variables (mapped onto the Silverstripe CMS design tokens)
+$color-primary: $cms-text-link;
+$color-success: $cms-text-success;
+$color-danger: $cms-text-danger;
+$color-warning: $cms-text-warning;
+$color-muted: $cms-text-light;
+$color-bg: $cms-white;
+$color-bg-light: $cms-bg-dark;
+$color-border: $cms-border-default;
+$color-text: $cms-text-default;
+$color-text-light: $cms-text-light;
+$font-stack: $cms-font-family;
+$radius-sm: $cms-radius;
+$radius-md: $cms-radius;
+$radius-lg: $cms-radius;
+$radius-pill: 1.25rem;
+$shadow-sm: $cms-shadow-xs;
+$shadow-md: $cms-shadow-s;
+$shadow-lg: $cms-shadow-l;
+$transition-fast: 0.15s ease;
+$transition-normal: 0.25s ease;
+
+// ============================================================
+// Icon (inline SVG, inherits font-size and color)
+// ============================================================
+.wf-icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  flex-shrink: 0;
+}
+
+// ============================================================
+// Workflow Panel (container)
+// ============================================================
+.workflow-panel {
+  font-family: $font-stack;
+  margin-bottom: 1rem;
+
+  &--error {
+    padding: 0.75rem 1rem;
+    background: color.adjust($color-danger, $lightness: 45%);
+    border: 0.0625rem solid color.adjust($color-danger, $lightness: 30%);
+    border-radius: $radius-md;
+    color: $color-danger;
+    font-size: 1rem;
+  }
+}
+
+// ============================================================
+// Workflow Status Bar (always visible)
+// ============================================================
+.workflow-bar {
+  display: flex;
+  flex-direction: column;
+  padding: 0.625rem 1rem;
+  background: $color-bg-light;
+  border: 0.0625rem solid $color-border;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  gap: 0.5rem;
+
+  &--empty {
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    background: $color-bg-light;
+  }
+
+  &--start {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  &--rejected {
+    background: #fff5f5;
+    border-color: #f5c6cb;
+  }
+
+  &--complete {
+    background: #f0fff4;
+    border-color: #c6f5c6;
+  }
+
+  &--published {
+    background: #f0fff4;
+    border-color: #a3d9a5;
+  }
+
+  &__empty-text {
+    font-size: 0.9375rem;
+    color: $color-muted;
+    font-style: italic;
+  }
+
+  &__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  &__indicator {
+    font-size: 1rem;
+  }
+
+  &__status {
+    font-weight: 600;
+    font-size: 1rem;
+    color: $color-text;
+  }
+
+  &__separator {
+    color: $color-muted;
+  }
+
+  &__current {
+    font-size: 1rem;
+    color: $color-text-light;
+  }
+
+  &__center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+    overflow-x: auto;
+  }
+
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  &__assigned {
+    font-size: 0.9375rem;
+    color: $color-text-light;
+  }
+
+  &__details-btn {
+    padding: 0.375rem 0.75rem;
+    border: 0.0625rem solid $color-primary;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: $color-primary;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-primary;
+      color: $color-bg;
+    }
+
+    &:focus-visible {
+      outline: 0.125rem solid $color-primary;
+      outline-offset: 0.125rem;
+    }
+  }
+
+  // Action row (approve/reject + comment)
+  &__actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 0.0625rem solid $color-border;
+  }
+
+  &__actions-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__actions-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  &__comment-input {
+    flex: 1;
+    min-width: 10rem;
+    max-width: 20rem;
+    padding: 0.375rem 0.625rem;
+    border: 0.0625rem solid $color-border;
+    border-radius: $radius-sm;
+    font-size: 0.9375rem;
+    transition: border-color $transition-fast;
+
+    &:focus {
+      border-color: $color-primary;
+      outline: none;
+    }
+  }
+
+  &__comment-toggle {
+    padding: 0.375rem 0.625rem;
+    border: 0.0625rem solid $color-border;
+    border-radius: $radius-sm;
+    background: transparent;
+    font-size: 0.9375rem;
+    color: $color-text-light;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      border-color: $color-primary;
+      color: $color-primary;
+    }
+  }
+
+  &__action-btn {
+    padding: 0.375rem 0.875rem;
+    border: none;
+    border-radius: $radius-sm;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    &:focus-visible {
+      outline: 0.125rem solid $color-primary;
+      outline-offset: 0.125rem;
+    }
+
+    &--approve {
+      background: $color-success;
+      color: $color-bg;
+
+      &:hover:not(:disabled) {
+        background: color.adjust($color-success, $lightness: -8%);
+      }
+    }
+
+    &--reject {
+      background: transparent;
+      border: 0.0625rem solid #c62828;
+      color: #c62828;
+
+      &:hover:not(:disabled) {
+        background: #c62828;
+        color: $color-bg;
+      }
+    }
+  }
+
+  &__restart-hint {
+    font-size: 0.9375rem;
+    color: $color-text-light;
+    font-style: italic;
+  }
+}
+
+// ============================================================
+// Step Tracker (horizontal progress)
+// ============================================================
+.workflow-tracker {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+  row-gap: 0.5rem;
+
+  // Full mode — show all labels, fit available space
+  &--full {
+    flex-wrap: wrap;
+    gap: 0;
+    row-gap: 0.25rem;
+
+    .workflow-tracker__step {
+      flex-shrink: 1;
+      min-width: 0;
+    }
+
+    .workflow-tracker__label {
+      font-size: 0.9375rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: fit-content;
+      max-width: 15rem;
+    }
+
+    .workflow-tracker__dot {
+      width: 1.25rem;
+      height: 1.25rem;
+      font-size: 0.5625rem;
+    }
+
+    .workflow-tracker__connector {
+      width: 1rem;
+    }
+  }
+
+  // Compact mode — dots only with tooltips
+  &--compact {
+    gap: 0;
+    flex-wrap: wrap;
+    row-gap: 0.25rem;
+
+    .workflow-tracker__dot {
+      width: 1.125rem;
+      height: 1.125rem;
+      font-size: 0.5rem;
+      cursor: help;
+    }
+
+    .workflow-tracker__connector {
+      width: 0.5rem;
+    }
+  }
+
+  &__step {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    white-space: nowrap;
+
+    &--completed .workflow-tracker__dot {
+      background: $color-success;
+      color: $color-bg;
+    }
+
+    &--active .workflow-tracker__dot {
+      background: $color-primary;
+      color: $color-bg;
+      box-shadow: 0 0 0 0.1875rem rgba($color-primary, 0.3);
+    }
+
+    &--active .workflow-tracker__label {
+      font-weight: 600;
+      color: $color-primary;
+    }
+
+    &--pending .workflow-tracker__dot {
+      background: $color-border;
+      color: $color-text-light;
+    }
+
+    &--pending .workflow-tracker__label {
+      color: $color-muted;
+    }
+
+    &--rejected .workflow-tracker__dot {
+      background: $color-danger;
+      color: $color-bg;
+      box-shadow: 0 0 0 0.1875rem rgba($color-danger, 0.2);
+    }
+
+    &--rejected .workflow-tracker__label {
+      font-weight: 600;
+      color: $color-danger;
+    }
+  }
+
+  &__dot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    flex-shrink: 0;
+    transition: all $transition-normal;
+  }
+
+  &__label {
+    font-size: 0.875rem;
+    color: $color-text;
+    transition: color $transition-fast;
+  }
+
+  &__connector {
+    width: 1.5rem;
+    height: 0.125rem;
+    margin: 0 0.125rem;
+    flex-shrink: 0;
+
+    &--completed {
+      background: $color-success;
+    }
+
+    &--pending {
+      background: $color-border;
+    }
+  }
+
+  &__count {
+    font-size: 0.9375rem;
+    color: $color-muted;
+    margin-left: 0.5rem;
+    white-space: nowrap;
+  }
+}
+
+// ============================================================
+// Overlay + Detail Panel
+// ============================================================
+.workflow-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 9999;
+  display: flex;
+  justify-content: flex-end;
+  animation: workflow-fade-in $transition-normal;
+}
+
+@keyframes workflow-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes workflow-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.workflow-detail {
+  width: 26rem;
+  max-width: 90vw;
+  height: 100%;
+  background: $color-bg;
+  box-shadow: $shadow-lg;
+  display: flex;
+  flex-direction: column;
+  animation: workflow-slide-in $transition-normal;
+  overflow-y: auto;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 0.0625rem solid $color-border;
+    background: $color-bg-light;
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    h3 {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: $color-text;
+    }
+  }
+
+  &__indicator {
+    color: $color-warning;
+    font-size: 1rem;
+  }
+
+  &__close {
+    background: none;
+    border: none;
+    font-size: 1.125rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    color: $color-text-light;
+    border-radius: $radius-sm;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-border;
+      color: $color-text;
+    }
+
+    &:focus-visible {
+      outline: 0.125rem solid $color-primary;
+      outline-offset: 0.125rem;
+    }
+  }
+
+  &__body {
+    padding: 1.25rem;
+    flex: 1;
+  }
+
+  &__section {
+    margin-bottom: 1.25rem;
+  }
+
+  &__notice {
+    padding: 0.75rem 1rem;
+    border-radius: $radius-md;
+    font-size: 1rem;
+
+    p {
+      margin: 0.25rem 0 0;
+      font-size: 0.9375rem;
+      font-weight: 400;
+    }
+
+    &--rejected {
+      background: #fff5f5;
+      border: 0.0625rem solid #f5c6cb;
+      color: $color-danger;
+    }
+
+    &--complete {
+      background: #f0fff4;
+      border: 0.0625rem solid #c6f5c6;
+      color: $color-success;
+    }
+  }
+
+  &__header--rejected {
+    background: #fff5f5;
+    border-bottom-color: #f5c6cb;
+  }
+
+  &__label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: $color-text-light;
+    margin-bottom: 0.5rem;
+  }
+
+  &__value {
+    font-size: 1.0625rem;
+    color: $color-text;
+    font-weight: 500;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  &__btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: $radius-md;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    &:focus-visible {
+      outline: 0.125rem solid $color-primary;
+      outline-offset: 0.125rem;
+    }
+
+    &--next {
+      background: $color-success;
+      color: $color-bg;
+
+      &:hover:not(:disabled) {
+        background: color.adjust($color-success, $lightness: -8%);
+      }
+    }
+
+    &--back {
+      background: $color-bg;
+      color: $color-danger;
+      border: 0.0625rem solid $color-danger;
+
+      &:hover:not(:disabled) {
+        background: color.adjust($color-danger, $lightness: 45%);
+      }
+    }
+  }
+
+  &__textarea {
+    width: 100%;
+    min-height: 4.5rem;
+    padding: 0.625rem;
+    border: 0.0625rem solid $color-border;
+    border-radius: $radius-md;
+    font-family: $font-stack;
+    font-size: 1rem;
+    resize: vertical;
+    transition: border-color $transition-fast;
+    box-sizing: border-box;
+
+    &::placeholder {
+      color: $color-muted;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: $color-primary;
+      box-shadow: 0 0 0 0.1875rem rgba($color-primary, 0.15);
+    }
+  }
+
+  &__feedback {
+    background: #f8f9fa;
+    border: 0.0625rem solid $color-border;
+    border-left: 0.1875rem solid $color-primary;
+    border-radius: $radius-md;
+    padding: 0.75rem 1rem;
+  }
+
+  &__feedback-text {
+    margin: 0 0 0.375rem;
+    font-size: 1rem;
+    color: $color-text;
+    font-style: italic;
+  }
+
+  &__feedback-meta {
+    display: block;
+    font-size: 0.875rem;
+    color: $color-text-light;
+  }
+}
+
+// ============================================================
+// Activity Feed
+// ============================================================
+.workflow-activity {
+  &__empty {
+    font-size: 0.9375rem;
+    color: $color-muted;
+    font-style: italic;
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  &__item {
+    border-bottom: 0.0625rem solid color.adjust($color-border, $lightness: 5%);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &--expanded {
+      background: $color-bg-light;
+      border-radius: $radius-md;
+      margin-bottom: 0.25rem;
+    }
+
+    &--has-comment {
+      border-left: 0.1875rem solid $color-primary;
+    }
+
+    &--has-comment.workflow-activity__item--expanded {
+      border-left-color: $color-primary;
+    }
+
+    &--rejection {
+      .workflow-activity__title {
+        color: $color-danger;
+      }
+
+      .workflow-activity__icon {
+        color: $color-danger;
+      }
+    }
+
+    &--rejection.workflow-activity__item--has-comment {
+      border-left-color: $color-danger;
+    }
+  }
+
+  &__toggle {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.5rem 0.375rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-family: $font-stack;
+    border-radius: $radius-sm;
+    transition: background $transition-fast;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.03);
+    }
+
+    &:focus-visible {
+      outline: 0.125rem solid $color-primary;
+      outline-offset: 0.0625rem;
+    }
+  }
+
+  &__icon {
+    font-size: 1rem;
+    line-height: 1.25rem;
+    flex-shrink: 0;
+    width: 1.25rem;
+    text-align: center;
+  }
+
+  &__summary {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  &__title {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: $color-text;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__comment-hint {
+    font-size: 0.875rem;
+    margin-left: 0.125rem;
+  }
+
+  &__author {
+    font-weight: 500;
+    color: $color-text-light;
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.9375rem;
+    color: $color-muted;
+  }
+
+  &__type-badge {
+    background: $color-bg-light;
+    border: 0.0625rem solid $color-border;
+    padding: 0 0.3125rem;
+    border-radius: $radius-pill;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: $color-text-light;
+  }
+
+  &__time {
+    cursor: help;
+  }
+
+  &__chevron {
+    font-size: 0.9375rem;
+    color: $color-muted;
+    line-height: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  // Expandable details section
+  &__details {
+    padding: 0.375rem 0.375rem 0.625rem 2.125rem;
+    border-top: 0.0625rem solid $color-border;
+  }
+
+  &__detail-row {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+    align-items: baseline;
+
+    &:first-child {
+      padding-top: 0.375rem;
+    }
+  }
+
+  &__detail-label {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: $color-text-light;
+    min-width: 4rem;
+    flex-shrink: 0;
+  }
+
+  &__detail-comment {
+    margin: 0;
+    font-size: 0.9375rem;
+    color: $color-text;
+    background: $color-bg;
+    padding: 0.375rem 0.5rem;
+    border-radius: $radius-sm;
+    border: 0.0625rem solid $color-border;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  &__detail-value {
+    font-size: 0.9375rem;
+    color: $color-text;
+  }
+
+  &__detail-empty {
+    font-size: 0.875rem;
+    color: $color-muted;
+    font-style: italic;
+    margin: 0.25rem 0 0;
+  }
+}
+
+
+// ============================================================
+// Workflow Builder (column layout: stage flow + content area)
+//
+// Styled after the Silverstripe CMS styleguide: CMS buttons, form
+// fields and tags, with each stage's steps drawn as a decision-tree
+// branch (elbow connectors from the stage number down to each step).
+// ============================================================
+
+// Horizontal space between the tree trunk and a step card; matches the
+// elbow width of the CMS decision-tree component.
+$wf-tree-elbow: rem(16);
+// Where the elbow meets a step card, measured from the card's top edge.
+$wf-tree-join: rem(20);
+$wf-tree-gap: rem(8);
+$wf-stage-num-size: rem(22);
+$wf-substep-icon-size: rem(16);
+$wf-substep-gap: rem(10);
+$wf-stage-padding-x: rem(12);
+// Places the trunk directly under the centre of the stage number.
+$wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
+
+@mixin wf-focus-ring($offset: rem(2)) {
+  &:focus-visible {
+    outline: rem(2) solid $cms-border-focus;
+    outline-offset: $offset;
+  }
+}
+
+@mixin wf-body-text {
+  font-family: $cms-font-family;
+  font-size: $cms-font-size-body;
+  line-height: $cms-line-height-body;
+}
+
+// CMS "Secondary button" (text-only): used for low-emphasis actions.
+@mixin wf-btn-secondary {
+  @include wf-body-text;
+  display: inline-flex;
+  align-items: center;
+  gap: rem(6);
+  padding: rem(5) rem(10) rem(6);
+  border: rem(1) solid transparent;
+  border-radius: $cms-radius-button;
+  background: transparent;
+  color: $cms-text-light;
+  cursor: pointer;
+  transition: background-color $transition-fast, color $transition-fast, border-color $transition-fast;
+
+  &:hover:not(:disabled) {
+    background: $cms-bg-secondary-hover;
+    color: $cms-text-default;
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  @include wf-focus-ring;
+}
+
+// CMS "Site tree tag": small uppercase status label.
+@mixin wf-tag($bg, $color) {
+  display: inline-flex;
+  align-items: center;
+  gap: rem(3);
+  padding: rem(1) rem(3) rem(2);
+  border-radius: $cms-radius-tag;
+  background: $bg;
+  color: $color;
+  font-size: rem(10);
+  font-weight: normal;
+  line-height: rem(12);
+  letter-spacing: 0;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+// CMS "Decision tree item" card.
+@mixin wf-tree-node {
+  display: flex;
+  align-items: center;
+  gap: $wf-substep-gap;
+  padding: rem(7) rem(12) rem(8);
+  border: rem(1) solid $cms-tree-line;
+  border-radius: $cms-radius;
+  background: $cms-white;
+  cursor: pointer;
+  transition: background-color $transition-fast, border-color $transition-fast;
+
+  &:hover {
+    border-color: $cms-blue-500;
+    background: $cms-blue-02;
+  }
+
+  @include wf-focus-ring(rem(1));
+}
+
+@mixin wf-tree-node-selected {
+  border-color: $cms-blue-500;
+  background: $cms-blue-10;
+
+  &:hover {
+    background: $cms-blue-10;
+  }
+}
+
+// CMS form control (input/select/textarea).
+@mixin wf-form-control {
+  @include wf-body-text;
+  width: 100%;
+  padding: rem(8) rem(12);
+  border: rem(1) solid $cms-border-input;
+  border-radius: $cms-radius;
+  background: $cms-white;
+  color: $cms-text-default;
+  box-sizing: border-box;
+  transition: border-color $transition-fast, box-shadow $transition-fast;
+
+  &::placeholder {
+    color: $cms-grey-400;
+    font-style: italic;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $cms-border-focus;
+    box-shadow: 0 0 0 rem(3) rgba($cms-border-focus, 0.25);
+  }
+
+  &:disabled,
+  &[readonly] {
+    background: $cms-grey-100;
+  }
+}
+
+@mixin wf-icon-button {
+  flex-shrink: 0;
+  padding: rem(4);
+  border: none;
+  border-radius: $cms-radius-button;
+  background: none;
+  color: $cms-text-light;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color $transition-fast, color $transition-fast;
+
+  &:hover {
+    background: $cms-bg-secondary-hover;
+    color: $cms-text-danger;
+  }
+
+  @include wf-focus-ring(rem(1));
+}
+
+.wf-builder {
+  @include wf-body-text;
+  color: $cms-text-default;
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: rem(12);
+    padding-bottom: rem(16);
+    margin-bottom: rem(20);
+    border-bottom: rem(1) solid $cms-border-default;
+  }
+
+  &__heading {
+    font-size: rem(18);
+    font-weight: $cms-font-weight-medium;
+    line-height: rem(22);
+    color: $cms-text-default;
+  }
+
+  &__intro {
+    max-width: rem(720);
+    margin: rem(6) 0 0;
+    color: $cms-text-light;
+
+    strong {
+      font-weight: $cms-font-weight-medium;
+      color: $cms-text-default;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: rem(12);
+    flex-shrink: 0;
+  }
+
+  &__msg {
+    color: $cms-text-success;
+
+    &--error {
+      color: $cms-text-danger;
+    }
+  }
+
+  // Default action button: CMS "Secondary button – Outline".
+  &__btn {
+    @include wf-btn-secondary;
+    border-color: $cms-border-outline;
+
+    // The one primary action on the screen: CMS "Primary button".
+    &--save {
+      padding: rem(4) rem(16) rem(6);
+      border-color: $cms-btn-primary;
+      background: $cms-btn-primary;
+      color: $cms-white;
+      font-size: rem(15);
+      line-height: rem(22);
+
+      &:hover:not(:disabled) {
+        border-color: $cms-btn-primary-hover;
+        background: $cms-btn-primary-hover;
+        color: $cms-white;
+      }
+    }
+
+    // CMS "Secondary button – Delete".
+    &--delete {
+      border-color: transparent;
+      color: $cms-text-danger;
+
+      &:hover:not(:disabled) {
+        color: $cms-text-danger;
+      }
+    }
+  }
+
+  // Column layout — flow list on the left, step editor on the right.
+  // Stacks vertically when the CMS edit form is narrow so neither column
+  // gets squeezed.
+  &__columns {
+    display: flex;
+    gap: rem(20);
+    min-height: rem(400);
+
+    @media (max-width: 34rem) {
+      flex-direction: column;
+    }
+  }
+
+  // Left column — a vertical flow of stage cards.
+  &__flow {
+    flex: 0 0 rem(400);
+    width: rem(400);
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: rem(8);
+
+    @media (max-width: 34rem) {
+      flex-basis: auto;
+      width: 100%;
+    }
+  }
+
+  &__flow-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: rem(12);
+    padding: rem(20);
+    border: rem(1) dashed $cms-border-dark;
+    border-radius: $cms-radius;
+    background: $cms-bg-default;
+  }
+
+  &__flow-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: rem(8);
+    margin: rem(4) 0 rem(8);
+  }
+
+  // A stage card groups the steps leading up to (and including) an
+  // approval gate, or a publish outcome.
+  &__stage {
+    border: rem(1) solid $cms-border-default;
+    border-radius: $cms-radius;
+    background: $cms-white;
+    box-shadow: $cms-shadow-xs;
+    overflow: hidden;
+  }
+
+  &__stage-head {
+    display: flex;
+    align-items: flex-start;
+    gap: rem(10);
+    padding: rem(10) $wf-stage-padding-x;
+    background: $cms-bg-dark;
+    border-bottom: rem(1) solid $cms-border-light;
+  }
+
+  &__stage-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: $wf-stage-num-size;
+    height: $wf-stage-num-size;
+    margin-top: rem(1);
+    border-radius: 50%;
+    background: $cms-blue-10;
+    color: $cms-blue-75;
+    font-size: rem(12);
+    font-weight: $cms-font-weight-medium;
+    line-height: 1;
+  }
+
+  &__stage--publish &__stage-num {
+    background: $cms-alert-success-bg;
+    color: $cms-alert-success-text;
+  }
+
+  &__stage-heading {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__stage-title {
+    display: block;
+    font-size: rem(14);
+    font-weight: $cms-font-weight-medium;
+    line-height: rem(22);
+    color: $cms-text-default;
+  }
+
+  &__stage-sub {
+    display: block;
+    color: $cms-text-light;
+  }
+
+  &__stage-remove {
+    @include wf-icon-button;
+  }
+
+  // Steps hang off a vertical trunk that starts under the stage number.
+  &__stage-steps {
+    padding: 0 $wf-stage-padding-x rem(12) $wf-tree-trunk-x;
+  }
+
+  // A single step inside a stage (assign, notify, or the gate itself).
+  &__substep {
+    @include wf-tree-node;
+    position: relative;
+    margin: $wf-tree-gap 0 0 $wf-tree-elbow;
+
+    // Elbow connector from the trunk into this card.
+    &::before {
+      content: "";
+      position: absolute;
+      top: -$wf-tree-gap - rem(1);
+      left: -$wf-tree-elbow - rem(1);
+      width: $wf-tree-elbow;
+      height: $wf-tree-gap + $wf-tree-join;
+      border-left: rem(1) solid $cms-tree-line;
+      border-bottom: rem(1) solid $cms-tree-line;
+      pointer-events: none;
+    }
+
+    // Trunk continues past this card down to the next sibling.
+    &:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      top: -$wf-tree-gap - rem(1);
+      bottom: rem(-1);
+      left: -$wf-tree-elbow - rem(1);
+      border-left: rem(1) solid $cms-tree-line;
+      pointer-events: none;
+    }
+
+    &--selected {
+      @include wf-tree-node-selected;
+    }
+
+    // The gate's status tag sits on its own row under the text, as tags do
+    // on CMS decision-tree items.
+    &--gate {
+      flex-wrap: wrap;
+      row-gap: rem(4);
+
+      .wf-builder__substep-info {
+        flex-basis: calc(100% - #{$wf-substep-icon-size + $wf-substep-gap});
+      }
+
+      .wf-builder__gate-badge {
+        margin-left: $wf-substep-icon-size + $wf-substep-gap;
+      }
+    }
+  }
+
+  &__substep-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    width: $wf-substep-icon-size;
+    font-size: $wf-substep-icon-size;
+    color: $cms-text-light;
+  }
+
+  &__substep-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__substep-title {
+    display: block;
+    color: $cms-text-dark;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__substep-role {
+    display: block;
+    font-size: rem(12);
+    line-height: rem(16);
+    color: $cms-text-light;
+  }
+
+  &__substep-remove {
+    @include wf-icon-button;
+  }
+
+  // "Waits for a decision": CMS site-tree tag in the draft/modified palette.
+  &__gate-badge {
+    @include wf-tag($cms-bg-modified, $cms-text-modified);
+    flex-shrink: 0;
+
+    .wf-icon {
+      font-size: rem(10);
+    }
+  }
+
+  &__stage-addons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: rem(4);
+    padding: 0 $wf-stage-padding-x rem(10) ($wf-tree-trunk-x + $wf-tree-elbow);
+  }
+
+  &__addons-label {
+    color: $cms-text-light;
+  }
+
+  &__addon-chip {
+    @include wf-btn-secondary;
+    padding: rem(2) rem(8);
+    color: $cms-text-link;
+
+    &:hover:not(:disabled) {
+      color: $cms-text-link-hover;
+    }
+
+    &--advanced {
+      color: $cms-text-light;
+    }
+  }
+
+  &__stage-branches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: rem(2) rem(16);
+    padding: rem(8) $wf-stage-padding-x;
+    border-top: rem(1) solid $cms-border-light;
+    background: $cms-bg-default;
+  }
+
+  &__branch {
+    display: inline-flex;
+    align-items: center;
+    gap: rem(4);
+    color: $cms-text-light;
+
+    strong {
+      font-weight: $cms-font-weight-medium;
+      color: $cms-text-default;
+    }
+
+    &--approve .wf-icon {
+      color: $cms-text-success;
+    }
+
+    &--reject .wf-icon {
+      color: $cms-text-danger;
+    }
+  }
+
+  // Insert-a-stage affordance between (and around) stage cards.
+  &__insert {
+    display: flex;
+    justify-content: center;
+  }
+
+  &__insert-btn {
+    @include wf-btn-secondary;
+    padding: rem(2) rem(8);
+  }
+
+  // When approved / Rejection path / Other steps: CMS alert-style panels
+  // with a coloured leading edge.
+  &__section {
+    margin-top: rem(12);
+    padding: rem(12);
+    border: rem(1) solid $cms-border-default;
+    border-left-width: rem(4);
+    border-radius: $cms-radius;
+    background: $cms-white;
+
+    &--approved {
+      border-left-color: $cms-text-success;
+    }
+
+    &--reject {
+      border-left-color: $cms-text-danger;
+    }
+
+    &--other {
+      border-left-color: $cms-grey-400;
+      background: $cms-bg-default;
+    }
+  }
+
+  &__section-label {
+    font-size: rem(12);
+    line-height: rem(20);
+    letter-spacing: rem(0.5);
+    text-transform: uppercase;
+    color: $cms-text-light;
+  }
+
+  &__section--approved &__section-label {
+    color: $cms-alert-success-text;
+  }
+
+  &__section--reject &__section-label {
+    color: $cms-alert-danger-text;
+  }
+
+  &__section-help {
+    margin: rem(2) 0 rem(10);
+    color: $cms-text-light;
+  }
+
+  &__raw-step {
+    @include wf-tree-node;
+    margin-bottom: rem(6);
+
+    &--selected {
+      @include wf-tree-node-selected;
+    }
+  }
+
+  &__advanced-add {
+    margin-top: rem(8);
+
+    summary {
+      color: $cms-text-link;
+      cursor: pointer;
+
+      &:hover {
+        color: $cms-text-link-hover;
+        text-decoration: underline;
+      }
+
+      @include wf-focus-ring(rem(1));
+    }
+
+    .wf-builder__addon-chip {
+      margin: rem(8) rem(4) 0 0;
+    }
+  }
+
+  // Right content area
+  &__content {
+    flex: 1;
+    min-width: 0;
+    border: rem(1) solid $cms-border-default;
+    border-radius: $cms-radius;
+    background: $cms-white;
+    box-shadow: $cms-shadow-xs;
+    overflow-y: auto;
+  }
+
+  &__content-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: rem(260);
+    padding: rem(32);
+    text-align: center;
+  }
+
+  // Edit panel (shown in content area)
+  &__edit {
+    padding: rem(24) rem(28);
+  }
+
+  &__edit-header {
+    display: flex;
+    align-items: center;
+    gap: rem(10);
+    margin-bottom: rem(4);
+  }
+
+  &__edit-heading {
+    font-size: rem(18);
+    font-weight: $cms-font-weight-medium;
+    line-height: rem(22);
+    color: $cms-text-default;
+  }
+
+  &__edit-badge {
+    @include wf-tag($cms-blue-02, $cms-blue-75);
+  }
+
+  &__edit-desc {
+    margin: 0 0 rem(24);
+    color: $cms-text-light;
+  }
+
+  &__edit-row {
+    margin-bottom: rem(20);
+
+    > label {
+      display: block;
+      margin-bottom: rem(6);
+      color: $cms-text-default;
+    }
+
+    input,
+    select,
+    textarea {
+      @include wf-form-control;
+    }
+
+    textarea {
+      resize: vertical;
+    }
+
+    select[multiple] {
+      min-height: rem(96);
+      padding: rem(4);
+    }
+
+    &--branch {
+      margin-bottom: rem(16);
+      padding-left: rem(12);
+      border-left: rem(2) solid $cms-border-default;
+    }
+  }
+
+  &__field-help {
+    margin: 0 0 rem(6);
+    color: $cms-text-light;
+  }
+
+  &__edit-divider {
+    height: rem(1);
+    margin: rem(20) 0;
+    background: $cms-border-light;
+  }
+
+  // Empty states
+  &__empty-title {
+    margin: 0 0 rem(6);
+    font-size: rem(16);
+    font-weight: $cms-font-weight-medium;
+    line-height: rem(22);
+    color: $cms-text-default;
+  }
+
+  &__empty-desc {
+    max-width: rem(420);
+    margin: 0;
+    color: $cms-text-light;
+  }
+}
+
+// !important guards: the CMS admin's global form CSS otherwise forces label
+// display:block and full-width checkbox inputs, which stacks the box above the
+// label. Keep the checkbox and its label on one centred row.
+.wf-builder__checkbox {
+  display: flex !important;
+  align-items: center;
+  gap: rem(8);
+  color: $cms-text-default;
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    width: rem(14) !important;
+    height: rem(14) !important;
+    min-width: rem(14) !important;
+    margin: 0 !important;
+    padding: 0;
+    flex: 0 0 auto;
+    accent-color: $cms-text-link;
+    cursor: pointer;
+  }
+}
+
+.wf-builder__transition-advanced {
+  margin-top: rem(8);
+
+  summary {
+    color: $cms-text-link;
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      color: $cms-text-link-hover;
+      text-decoration: underline;
+    }
+
+    @include wf-focus-ring(rem(1));
+  }
+
+  .wf-builder__edit-row {
+    margin: rem(8) 0 0;
+  }
+}
+
+// Compact searchable multi-select (group/user assignment). Chips + filter box,
+// with a scrollable filtered option list so long lists stay manageable.
+// Chips follow the CMS "Form field tags" component.
+.wf-ms {
+  position: relative;
+
+  // Beat `.wf-builder__edit-row input` (same specificity, later source
+  // order) so the search box and checkboxes size naturally.
+  input {
+    width: auto;
+  }
+
+  &__control {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: rem(6);
+    min-height: rem(38);
+    padding: rem(4) rem(6);
+    border: rem(1) solid $cms-border-input;
+    border-radius: $cms-radius;
+    background: $cms-white;
+    box-sizing: border-box;
+    cursor: text;
+    transition: border-color $transition-fast, box-shadow $transition-fast;
+  }
+
+  &--open &__control,
+  &__control:focus-within {
+    border-color: $cms-border-focus;
+    box-shadow: 0 0 0 rem(3) rgba($cms-border-focus, 0.25);
+  }
+
+  &__placeholder {
+    padding-left: rem(6);
+    color: $cms-grey-400;
+    font-style: italic;
+  }
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: rem(6);
+    padding: 0 rem(6) 0 rem(8);
+    border: rem(1) solid $cms-border-default;
+    border-radius: $cms-radius;
+    background: $cms-white;
+    color: $cms-text-default;
+    font-size: rem(12);
+    line-height: rem(22);
+  }
+
+  &__chip-remove {
+    display: inline-flex;
+    align-items: center;
+    padding: 0;
+    border: none;
+    background: none;
+    color: $cms-text-light;
+    font-size: rem(10);
+    cursor: pointer;
+
+    &:hover {
+      color: $cms-text-danger;
+    }
+
+    @include wf-focus-ring(rem(1));
+  }
+
+  // Doubled class beats the edit-row form-control styles so the filter box
+  // stays borderless inside the chip control.
+  &__input.wf-ms__input {
+    flex: 1 1 rem(96);
+    min-width: rem(96);
+    padding: rem(4) rem(6);
+    border: none;
+    background: transparent;
+    box-shadow: none;
+
+    &:focus {
+      box-shadow: none;
+    }
+  }
+
+  &__menu {
+    margin-top: rem(4);
+    max-height: rem(224);
+    overflow-y: auto;
+    border: rem(1) solid $cms-border-default;
+    border-radius: $cms-radius;
+    background: $cms-white;
+    box-shadow: $cms-shadow-s;
+  }
+
+  &__option {
+    display: flex !important;
+    align-items: center;
+    gap: rem(8);
+    min-height: rem(32);
+    margin: 0 !important;
+    padding: rem(6) rem(12);
+    border-bottom: rem(1) solid $cms-border-light;
+    color: $cms-text-default;
+    cursor: pointer;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    input[type="checkbox"] {
+      width: rem(14) !important;
+      height: rem(14) !important;
+      min-width: rem(14) !important;
+      margin: 0 !important;
+      padding: 0;
+      flex: 0 0 auto;
+      accent-color: $cms-text-link;
+      cursor: pointer;
+    }
+
+    span {
+      flex: 1 1 auto;
+    }
+
+    &:hover {
+      background: $cms-blue-02;
+    }
+  }
+
+  &__empty {
+    padding: rem(8) rem(12);
+    color: $cms-text-light;
+  }
+}

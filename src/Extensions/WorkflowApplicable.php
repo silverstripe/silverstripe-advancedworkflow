@@ -6,16 +6,12 @@ use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
-use SilverStripe\Forms\FormAction;
 use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\Forms\GridField\GridFieldConfig_Base;
 use SilverStripe\Forms\GridField\GridFieldDetailForm;
 use SilverStripe\Forms\GridField\GridFieldEditButton;
-use SilverStripe\Forms\HiddenField;
 use SilverStripe\Forms\ListboxField;
 use SilverStripe\Forms\ReadonlyField;
-use SilverStripe\Forms\Tab;
-use SilverStripe\Forms\TabSet;
 use SilverStripe\ORM\CMSPreviewable;
 use SilverStripe\Core\Extension;
 use SilverStripe\ORM\DataList;
@@ -125,13 +121,6 @@ class WorkflowApplicable extends Extension
         if (!$this->owner->hasMethod('getSettingsFields')) {
             $this->updateFields($fields);
         }
-
-        // Instantiate a hidden form field to pass the triggered workflow definition through,
-        // allowing a dynamic form action.
-
-        $fields->push(HiddenField::create(
-            'TriggeredWorkflowID'
-        ));
     }
 
     public function updateFields(FieldList $fields)
@@ -195,95 +184,8 @@ class WorkflowApplicable extends Extension
 
     protected function updateCMSActions(FieldList $actions)
     {
-        $active = $this->getWorkflowService()->getWorkflowFor($this->owner);
-        $c = Controller::curr();
-        if ($c && $c->hasExtension(AdvancedWorkflowExtension::class) && !$this->owner->isArchived()) {
-            if ($active) {
-                if ($this->canEditWorkflow()) {
-                    $workflowOptions = new Tab(
-                        'WorkflowOptions',
-                        _t(
-                            'SiteTree.WorkflowOptions',
-                            'Workflow options',
-                            'Expands a view for workflow specific buttons'
-                        )
-                    );
-
-                    $menu = $actions->fieldByName('ActionMenus');
-                    if (!$menu) {
-                        // create the menu for adding to any arbitrary non-sitetree object
-                        $menu = $this->createActionMenu();
-                        $actions->push($menu);
-                    }
-
-                    if (!$actions->fieldByName('ActionMenus.WorkflowOptions')) {
-                        $menu->push($workflowOptions);
-                    }
-
-                    $transitions = $active->CurrentAction()->getValidTransitions();
-
-                    foreach ($transitions as $transition) {
-                        if ($transition->canExecute($active)) {
-                            $action = FormAction::create('updateworkflow-' . $transition->ID, $transition->Title)
-                                ->setAttribute('data-transitionid', $transition->ID);
-                            $workflowOptions->push($action);
-                        }
-                    }
-
-                    // $action = FormAction::create('updateworkflow', $active->CurrentAction() ?
-                    // $active->CurrentAction()->Title :
-                    // _t('WorkflowApplicable.UPDATE_WORKFLOW', 'Update Workflow'))
-                    //  ->setAttribute('data-icon', 'navigation');
-
-                    // $actions->fieldByName('MajorActions') ?
-                    // $actions->fieldByName('MajorActions')->push($action) :
-                    // $actions->push($action);
-                }
-            } else {
-                // Instantiate the workflow definition initial actions.
-                $definitions = $this->getWorkflowService()->getDefinitionsFor($this->owner);
-                if ($definitions) {
-                    $menu = $actions->fieldByName('ActionMenus');
-                    if (is_null($menu)) {
-                        // Instantiate a new action menu for any data objects.
-
-                        $menu = $this->createActionMenu();
-                        $actions->push($menu);
-                    }
-                    $tab = Tab::create(
-                        'AdditionalWorkflows'
-                    );
-                    $addedFirst = false;
-                    foreach ($definitions as $definition) {
-                        if ($definition->getInitialAction() && $this->owner->canEdit()) {
-                            $action = FormAction::create(
-                                "startworkflow-{$definition->ID}",
-                                $definition->InitialActionButtonText ?
-                                    $definition->InitialActionButtonText :
-                                    $definition->getInitialAction()->Title
-                            )
-                                ->addExtraClass('start-workflow')
-                                ->setAttribute('data-workflow', $definition->ID)
-                                ->addExtraClass('btn-primary');
-
-                            // The first element is the main workflow definition,
-                            // and will be displayed as a major action.
-                            if (!$addedFirst) {
-                                $addedFirst = true;
-                                $majorActions = $actions->fieldByName('MajorActions');
-                                $majorActions ? $majorActions->push($action) : $actions->push($action);
-                            } else {
-                                $tab->push($action);
-                            }
-                        }
-                    }
-                    // Only display menu if actions pushed to it
-                    if ($tab->Fields()->exists()) {
-                        $menu->insertBefore('MoreOptions', $tab);
-                    }
-                }
-            }
-        }
+        // Workflow action buttons are now rendered in the React workflow progress bar panel.
+        // See WorkflowStatusBar.js for approve/reject/start workflow buttons.
     }
 
     protected function createActionMenu()
@@ -411,6 +313,11 @@ class WorkflowApplicable extends Extension
             }
         }
 
+        // Allow publishing if an approved (non-rejected) workflow completed for this record
+        if ($this->hasApprovedWorkflow()) {
+            return true;
+        }
+
         // use definition to determine if publishing directly is allowed
         $definition = $this->getWorkflowService()->getDefinitionFor($this->owner);
 
@@ -441,6 +348,44 @@ class WorkflowApplicable extends Extension
         if ($active = $this->getWorkflowInstance()) {
             return $active->canEditTarget();
         }
+    }
+
+    /**
+     * Check if the most recent workflow for this record completed successfully (approved, not cancelled/rejected)
+     * and the record hasn't been modified since. Used to allow publishing after workflow approval.
+     */
+    private function hasApprovedWorkflow(): bool
+    {
+        $baseClass = DataObject::getSchema()->baseDataClass($this->owner);
+
+        $latestInstance = WorkflowInstance::get()->filter([
+            'TargetClass' => $baseClass,
+            'TargetID' => $this->owner->ID,
+            'WorkflowStatus' => 'Complete',
+        ])->sort('ID', 'DESC')->first();
+
+        if (!$latestInstance) {
+            return false;
+        }
+
+        // If record was edited after workflow completed, approval is stale
+        if ($this->owner->LastEdited > $latestInstance->LastEdited) {
+            return false;
+        }
+
+        // Check no CancelWorkflowAction was executed — indicates rejection
+        $cancelActionIds = \Symbiote\AdvancedWorkflow\Actions\CancelWorkflowAction::get()->column('ID');
+
+        if (empty($cancelActionIds)) {
+            return true;
+        }
+
+        $cancelledAction = $latestInstance->Actions()->filter([
+            'BaseActionID' => $cancelActionIds,
+            'Finished' => 1,
+        ])->first();
+
+        return !$cancelledAction;
     }
 
     /**

@@ -1,0 +1,94 @@
+@use "sass:math";
+
+// ============================================================
+// Silverstripe CMS design tokens
+//
+// Values mirror the "Silverstripe CMS" Figma styleguide (Colours,
+// Typography and Components pages) so the workflow UI reads as part of
+// the CMS rather than a separate app. Token names follow the Figma style
+// names (e.g. "Text/Light" -> $cms-text-light).
+// ============================================================
+
+// The CMS admin sets the root font size to 13px, so rem values must be
+// derived from that rather than the browser default of 16px.
+$cms-root-font-size: 13px;
+
+/// Converts a Figma pixel measurement to rem against the CMS root size.
+/// @param {Number} $px - unitless pixel value taken from the design
+/// @return {Number} rem value
+@function rem($px) {
+  @return math.div($px, math.div($cms-root-font-size, 1px)) * 1rem;
+}
+
+// Greys
+$cms-grey-100: #eef0f4;
+$cms-grey-200: #ced5e1;
+$cms-grey-400: #8f9fba;
+$cms-grey-500: #6f84a7;
+$cms-grey-600: #566b8d;
+$cms-grey-700: #43536d;
+$cms-grey-800: #303b4d;
+$cms-white: #ffffff;
+
+// Text
+$cms-text-default: $cms-grey-700;
+$cms-text-light: $cms-grey-600;
+$cms-text-dark: $cms-grey-800;
+$cms-text-link: #0071c4;
+$cms-text-link-hover: #0062ab;
+$cms-text-success: #008a00;
+$cms-text-danger: #da273b;
+$cms-text-warning: #856404;
+$cms-text-modified: #cb3e00;
+
+// Backgrounds
+$cms-bg-default: #fafbfc;
+$cms-bg-dark: #f4f6f8;
+$cms-bg-modified: #fdf2eb;
+$cms-bg-secondary-hover: #ebedf2;
+
+// Borders
+$cms-border-default: #d4dbe5;
+$cms-border-dark: #c8d0dd;
+$cms-border-light: #e1e5ed;
+$cms-border-input: $cms-grey-200;
+$cms-border-focus: #66afe9;
+$cms-border-outline: $cms-grey-400;
+
+// Buttons
+$cms-btn-primary: #008a00;
+$cms-btn-primary-hover: #006400;
+
+// Bright blue (selected tree items and tags)
+$cms-blue-02: #f0f7ff;
+$cms-blue-10: #d1e7ff;
+$cms-blue-75: #00317b;
+$cms-blue-500: #a9c2da;
+
+// Decision-tree connectors and node borders
+$cms-tree-line: #c7d0d9;
+
+// Alerts
+$cms-alert-info-bg: #d4eef9;
+$cms-alert-info-border: #c3e7f7;
+$cms-alert-info-text: #155976;
+$cms-alert-success-bg: #cce8cc;
+$cms-alert-success-border: #b8deb8;
+$cms-alert-success-text: #004800;
+$cms-alert-danger-text: #71141f;
+
+// Typography
+$cms-font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+$cms-font-size-body: rem(13);
+$cms-line-height-body: rem(20);
+$cms-font-weight-medium: 500;
+
+// Shape
+$cms-radius: rem(3);
+$cms-radius-button: rem(3.25);
+$cms-radius-tag: rem(2);
+
+// Shadows
+$cms-shadow-xs: 0 rem(1) rem(3) rgba(0, 0, 0, 0.1), 0 rem(1) rem(2) rgba(0, 0, 0, 0.2);
+$cms-shadow-s: 0 rem(2) rem(6) rgba(0, 0, 0, 0.16), 0 rem(1) rem(3) rgba(0, 0, 0, 0.23);
+$cms-shadow-l: 0 rem(14) rem(28) rgba(0, 0, 0, 0.25), 0 rem(10) rem(10) rgba(0, 0, 0, 0.26);

@@ -91,7 +91,12 @@ class WorkflowService implements PermissionProvider
             || $dataObject->hasExtension(FileWorkflowApplicable::class)
         ) {
             if ($dataObject->WorkflowDefinitionID) {
-                return WorkflowDefinition::get()->setUseCache(true)->byID($dataObject->WorkflowDefinitionID);
+                $definition = WorkflowDefinition::get()->setUseCache(true)->byID($dataObject->WorkflowDefinitionID);
+
+                if ($definition) {
+                    return $definition;
+                }
+                // Definition was deleted — fall through to parent inheritance
             }
             if ($dataObject->hasMethod('useInheritedWorkflow') && !$dataObject->useInheritedWorkflow()) {
                 return null;
