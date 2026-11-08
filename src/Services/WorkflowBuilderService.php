@@ -570,7 +570,10 @@ class WorkflowBuilderService
      */
     private function configFieldMap(WorkflowStepType $type): array
     {
-        return array_merge(WorkflowBuilderService::BASE_CONFIG_FIELDS, WorkflowBuilderService::TYPE_CONFIG_FIELDS[$type->value] ?? []);
+        return array_merge(
+            WorkflowBuilderService::BASE_CONFIG_FIELDS,
+            WorkflowBuilderService::TYPE_CONFIG_FIELDS[$type->value] ?? []
+        );
     }
 
     /**

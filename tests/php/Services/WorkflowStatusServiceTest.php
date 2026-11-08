@@ -129,22 +129,6 @@ class WorkflowStatusServiceTest extends SapphireTest
         $this->assertSame([], $this->service->getUserLabels([]));
     }
 
-    public function testAddCommentByIdThrowsForInvalidInstance(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Workflow instance not found');
-
-        $this->service->addCommentById(99999, 'test comment');
-    }
-
-    public function testExecuteTransitionByIdThrowsForInvalidTransition(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Transition not found');
-
-        $this->service->executeTransitionById(99999);
-    }
-
     public function testGetStatusReturnsCurrentStepTitle(): void
     {
         $this->createWorkflowForTarget(45, 'SilverStripe\\CMS\\Model\\SiteTree');

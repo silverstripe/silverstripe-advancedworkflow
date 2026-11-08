@@ -15,12 +15,12 @@ use Symbiote\AdvancedWorkflow\DataObjects\WorkflowAction;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowActionInstance;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowDefinition;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowInstance;
-use Symbiote\AdvancedWorkflow\DataObjects\WorkflowTransition;
 use Symbiote\AdvancedWorkflow\Services\WorkflowService;
 
 /**
- * Provides workflow status data for a target record and handles
- * transition execution and commenting for the sitetree UI panel.
+ * Builds the workflow status payload shown in the CMS edit form's workflow
+ * panel. Workflow actions themselves are submitted through the edit form
+ * (see AdvancedWorkflowExtension) so the record is saved before they run.
  */
 class WorkflowStatusService
 {
@@ -50,7 +50,11 @@ class WorkflowStatusService
             return null;
         }
 
-        $isFinished = in_array($instance->WorkflowStatus, [WorkflowStatusService::STATUS_COMPLETE, WorkflowStatusService::STATUS_CANCELLED], true);
+        $isFinished = in_array(
+            $instance->WorkflowStatus,
+            [WorkflowStatusService::STATUS_COMPLETE, WorkflowStatusService::STATUS_CANCELLED],
+            true
+        );
         $executedActionIds = $this->getExecutedActionIds($instance);
         $isRejected = $isFinished && $this->wasRejected($instance);
         $isPublished = $isFinished
@@ -99,8 +103,10 @@ class WorkflowStatusService
         // When workflow is finished, provide option to start a new one
         $availableWorkflows = [];
 
-        if ($isFinished) {
-            $availableWorkflows = $this->getAvailableWorkflows($targetId, $targetClass);
+        $target = $isFinished ? $this->findDraftRecord($targetId, $targetClass) : null;
+
+        if ($target instanceof DataObject) {
+            $availableWorkflows = $this->getStartableWorkflows($target);
         }
 
         return [
@@ -118,79 +124,6 @@ class WorkflowStatusService
             'history' => $history,
             'availableWorkflows' => $availableWorkflows,
         ];
-    }
-
-    /**
-     * Execute a workflow transition by ID, optionally with a comment.
-     *
-     * @throws \InvalidArgumentException When transition or target cannot be found.
-     */
-    public function executeTransitionById(int $transitionId, ?string $comment = null): void
-    {
-        $transition = WorkflowTransition::get()->byID($transitionId);
-
-        if (!$transition instanceof WorkflowTransition || !$transition->exists()) {
-            throw new \InvalidArgumentException('Transition not found');
-        }
-
-        $action = $transition->Action();
-
-        if (!$action instanceof WorkflowAction || !$action->exists()) {
-            throw new \InvalidArgumentException('Action not found for transition');
-        }
-
-        $definition = $action->WorkflowDef();
-
-        if (!$definition instanceof WorkflowDefinition || !$definition->exists()) {
-            throw new \InvalidArgumentException('Workflow definition not found');
-        }
-
-        $instance = WorkflowInstance::get()
-            ->filter([
-                'DefinitionID' => $definition->ID,
-                'WorkflowStatus' => ['Active', 'Paused'],
-            ])
-            ->sort('Created', 'DESC')
-            ->first();
-
-        if (!$instance instanceof WorkflowInstance || !$instance->exists()) {
-            throw new \InvalidArgumentException('No active workflow instance found');
-        }
-
-        $target = $instance->getTarget();
-
-        if (!$target instanceof DataObject) {
-            throw new \InvalidArgumentException('Workflow target not found');
-        }
-
-        // Capture the action being acted on BEFORE the transition finishes it and
-        // advances (or completes) the workflow. On completion CurrentActionID is
-        // reset to 0, so reading the current action afterwards would drop the
-        // comment for the final step.
-        $actedActionId = (int)$instance->CurrentActionID;
-
-        $workflowService = Injector::inst()->get(WorkflowService::class);
-        $workflowService->executeTransition($target, $transitionId);
-
-        if ($comment !== null && trim($comment) !== '') {
-            $this->attachComment($actedActionId, $comment);
-        }
-    }
-
-    /**
-     * Add a comment to an existing workflow instance.
-     *
-     * @throws \InvalidArgumentException When instance cannot be found.
-     */
-    public function addCommentById(int $instanceId, string $comment): void
-    {
-        $instance = WorkflowInstance::get()->byID($instanceId);
-
-        if (!$instance instanceof WorkflowInstance || !$instance->exists()) {
-            throw new \InvalidArgumentException('Workflow instance not found');
-        }
-
-        $this->addCommentToInstance($instance, $comment);
     }
 
     /**
@@ -293,60 +226,78 @@ class WorkflowStatusService
     }
 
     /**
-     * Get available workflow definitions that can be started on a target record.
+     * Panel payload for a record: the active workflow's status, or, when there
+     * is none, the workflows the current user may start on it.
+     *
+     * @return array<string, mixed>
+     */
+    public function getPanelData(DataObject $record): array
+    {
+        $status = $this->getStatusForTarget((int)$record->ID, $record->ClassName);
+
+        if ($status !== null) {
+            return $status;
+        }
+
+        return [
+            'workflow' => null,
+            'availableWorkflows' => $this->getStartableWorkflows($record),
+        ];
+    }
+
+    /**
+     * Workflow definitions the current user can start on a record. Starting a
+     * workflow saves the record first, so nothing is offered without edit
+     * rights, and nothing while a workflow is already active or paused.
      *
      * @return array<int, array{id: int, title: string}>
      */
-    private function getAvailableWorkflows(int $targetId, string $targetClass): array
+    private function getStartableWorkflows(DataObject $record): array
     {
-        // Ensure we read from Draft stage (API may default to Live)
-        $record = Versioned::get_by_stage($targetClass, Versioned::DRAFT)->byID($targetId);
-
-        if (!$record instanceof DataObject || !$record->exists()) {
-            $classesToCheck = array_values(ClassInfo::ancestry($targetClass));
-
-            foreach ($classesToCheck as $class) {
-                $record = Versioned::get_by_stage($class, Versioned::DRAFT)->byID($targetId);
-
-                if ($record instanceof DataObject && $record->exists()) {
-                    break;
-                }
-            }
-        }
-
-        if (!$record instanceof DataObject || !$record->exists()) {
+        if (!$record->canEdit()) {
             return [];
         }
 
         $workflowService = Injector::inst()->get(WorkflowService::class);
 
-        // Only check for active/paused — if one exists, can't start another
-        $activeInstance = $workflowService->getWorkflowFor($record, false);
-
-        if ($activeInstance) {
+        if ($workflowService->getWorkflowFor($record, false)) {
             return [];
         }
 
-        $definitions = $workflowService->getDefinitionsFor($record);
         $available = [];
 
-        if (!$definitions) {
-            return [];
-        }
-
-        foreach ($definitions as $definition) {
+        foreach ($workflowService->getDefinitionsFor($record) ?: [] as $definition) {
             $initialAction = $definition->getInitialAction();
 
-            if ($initialAction) {
-                $available[] = [
-                    'id' => (int)$definition->ID,
-                    'title' => $definition->InitialActionButtonText
-                        ?: 'Request Approval',
-                ];
+            if (!$initialAction) {
+                continue;
             }
+
+            $available[] = [
+                'id' => (int)$definition->ID,
+                // Matches the label of the edit form's start-workflow action.
+                'title' => $definition->InitialActionButtonText ?: $initialAction->Title,
+            ];
         }
 
         return $available;
+    }
+
+    /**
+     * Load a record from the draft stage, falling back through the class
+     * ancestry when the stored class is a parent of the record's real class.
+     */
+    private function findDraftRecord(int $targetId, string $targetClass): ?DataObject
+    {
+        foreach (array_reverse(array_values(ClassInfo::ancestry($targetClass))) as $class) {
+            $record = Versioned::get_by_stage($class, Versioned::DRAFT)->byID($targetId);
+
+            if ($record instanceof DataObject && $record->exists()) {
+                return $record;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -522,8 +473,7 @@ class WorkflowStatusService
     private function classifyTransitions(
         ?WorkflowActionInstance $currentAction,
         ?WorkflowInstance $instance = null
-    ): array
-    {
+    ): array {
         $next = [];
         $back = [];
 
@@ -723,28 +673,5 @@ class WorkflowStatusService
         }
 
         return 'action';
-    }
-
-    private function addCommentToInstance(WorkflowInstance $instance, string $comment): void
-    {
-        $this->attachComment((int)$instance->CurrentActionID, $comment);
-    }
-
-    /**
-     * Persist a comment onto a specific action-instance record, re-fetched fresh
-     * by ID so writing only touches its Comment (never resurrecting stale state).
-     */
-    private function attachComment(int $actionInstanceId, string $comment): void
-    {
-        if ($actionInstanceId <= 0) {
-            return;
-        }
-
-        $actionInstance = WorkflowActionInstance::get()->byID($actionInstanceId);
-
-        if ($actionInstance instanceof WorkflowActionInstance && $actionInstance->exists()) {
-            $actionInstance->Comment = $comment;
-            $actionInstance->write();
-        }
     }
 }

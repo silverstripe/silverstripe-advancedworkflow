@@ -13,7 +13,6 @@ use SilverStripe\Security\Permission;
 use SilverStripe\Versioned\Versioned;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowDefinition;
 use Symbiote\AdvancedWorkflow\Services\WorkflowBuilderService;
-use Symbiote\AdvancedWorkflow\Services\WorkflowService;
 use Symbiote\AdvancedWorkflow\Services\WorkflowStatusService;
 
 /**
@@ -22,15 +21,17 @@ use Symbiote\AdvancedWorkflow\Services\WorkflowStatusService;
  */
 class WorkflowBuilderController extends Controller
 {
+    /**
+     * Permission::check() treats this code as "holds any CMS_ACCESS_* code".
+     */
+    private const ANY_CMS_ACCESS = 'CMS_ACCESS';
+
     private static $allowed_actions = [
         'workflowMeta',
         'searchUsers',
         'workflowData',
         'loadDefinition',
         'saveWorkflow',
-        'executeTransition',
-        'startWorkflow',
-        'addComment',
     ];
 
     protected function init(): void
@@ -51,12 +52,13 @@ class WorkflowBuilderController extends Controller
     }
 
     /**
-     * Front-end panel endpoints run inside the CMS edit form — require a
-     * logged-in CMS user.
+     * The status panel renders inside CMS edit forms, so any user with access
+     * to at least one CMS section may call it; per-record access is checked
+     * against the record itself.
      */
     private function canUseCms(): bool
     {
-        return Permission::check('CMS_ACCESS_LeftAndMain') || Permission::check('ADMIN');
+        return Permission::check(WorkflowBuilderController::ANY_CMS_ACCESS);
     }
 
     private function forbidden(): HTTPResponse
@@ -104,38 +106,19 @@ class WorkflowBuilderController extends Controller
             return $this->jsonResponse(['error' => 'Unknown ClassName'], 400);
         }
 
-        $service = Injector::inst()->get(WorkflowStatusService::class);
-        $data = $service->getStatusForTarget($recordId, $className);
+        $record = $this->findTargetRecord($className, $recordId);
 
-        if ($data === null) {
-            // No active workflow — return available definitions for starting
-            $record = $this->findTargetRecord($className, $recordId);
-            $availableDefinitions = [];
-
-            if ($record instanceof DataObject) {
-                $workflowService = Injector::inst()->get(WorkflowService::class);
-                $definitions = $workflowService->getDefinitionsFor($record);
-
-                if ($definitions) {
-                    foreach ($definitions as $definition) {
-                        if ($definition->getInitialAction()) {
-                            $availableDefinitions[] = [
-                                'id' => (int)$definition->ID,
-                                'title' => $definition->InitialActionButtonText
-                                    ?: 'Request Approval',
-                            ];
-                        }
-                    }
-                }
-            }
-
-            return $this->jsonResponse([
-                'workflow' => null,
-                'availableWorkflows' => $availableDefinitions,
-            ]);
+        if (!$record instanceof DataObject) {
+            return $this->jsonResponse(['error' => 'Record not found'], 404);
         }
 
-        return $this->jsonResponse($data);
+        if (!$record->canView()) {
+            return $this->forbidden();
+        }
+
+        $service = Injector::inst()->get(WorkflowStatusService::class);
+
+        return $this->jsonResponse($service->getPanelData($record));
     }
 
     public function loadDefinition(HTTPRequest $request): HTTPResponse
@@ -179,97 +162,6 @@ class WorkflowBuilderController extends Controller
             $result = $service->saveDefinition($data);
 
             return $this->jsonResponse($result);
-        } catch (\Exception $e) {
-            return $this->jsonResponse(['error' => $e->getMessage()], 500);
-        }
-    }
-
-    public function executeTransition(HTTPRequest $request): HTTPResponse
-    {
-        if (!$this->canUseCms()) {
-            return $this->forbidden();
-        }
-
-        $body = json_decode($request->getBody(), true);
-        $transitionId = (int)($body['TransitionID'] ?? $request->postVar('TransitionID') ?? 0);
-        $comment = $body['Comment'] ?? $request->postVar('Comment') ?? null;
-
-        if ($transitionId <= 0) {
-            return $this->jsonResponse(['error' => 'Missing TransitionID'], 400);
-        }
-
-        $service = Injector::inst()->get(WorkflowStatusService::class);
-
-        try {
-            $service->executeTransitionById($transitionId, $comment);
-
-            return $this->jsonResponse(['success' => true]);
-        } catch (\InvalidArgumentException $e) {
-            return $this->jsonResponse(['error' => $e->getMessage()], 404);
-        } catch (\Exception $e) {
-            return $this->jsonResponse(['error' => $e->getMessage()], 500);
-        }
-    }
-
-    public function addComment(HTTPRequest $request): HTTPResponse
-    {
-        if (!$this->canUseCms()) {
-            return $this->forbidden();
-        }
-
-        $body = json_decode($request->getBody(), true);
-        $instanceId = (int)($body['InstanceID'] ?? $request->postVar('InstanceID') ?? 0);
-        $comment = $body['Comment'] ?? $request->postVar('Comment') ?? '';
-
-        if ($instanceId <= 0 || trim((string)$comment) === '') {
-            return $this->jsonResponse(['error' => 'Missing InstanceID or Comment'], 400);
-        }
-
-        $service = Injector::inst()->get(WorkflowStatusService::class);
-
-        try {
-            $service->addCommentById($instanceId, (string)$comment);
-
-            return $this->jsonResponse(['success' => true]);
-        } catch (\InvalidArgumentException $e) {
-            return $this->jsonResponse(['error' => $e->getMessage()], 404);
-        } catch (\Exception $e) {
-            return $this->jsonResponse(['error' => $e->getMessage()], 500);
-        }
-    }
-
-    public function startWorkflow(HTTPRequest $request): HTTPResponse
-    {
-        if (!$this->canUseCms()) {
-            return $this->forbidden();
-        }
-
-        $body = json_decode($request->getBody(), true);
-        $recordId = (int)($body['RecordID'] ?? 0);
-        $className = $body['ClassName'] ?? '';
-        $definitionId = (int)($body['DefinitionID'] ?? 0);
-
-        if ($recordId <= 0 || $className === '') {
-            return $this->jsonResponse(['error' => 'Missing RecordID or ClassName'], 400);
-        }
-
-        if (!$this->isTargetClass($className)) {
-            return $this->jsonResponse(['error' => 'Unknown ClassName'], 400);
-        }
-
-        $record = $this->findTargetRecord($className, $recordId);
-
-        if (!$record instanceof DataObject) {
-            return $this->jsonResponse(['error' => 'Record not found'], 404);
-        }
-
-        $workflowService = Injector::inst()->get(WorkflowService::class);
-
-        try {
-            // startWorkflow returns void — throws on failure
-            $workflowService->startWorkflow($record, $definitionId ?: null);
-
-            return $this->jsonResponse(['success' => true]);
         } catch (\Exception $e) {
             return $this->jsonResponse(['error' => $e->getMessage()], 500);
         }

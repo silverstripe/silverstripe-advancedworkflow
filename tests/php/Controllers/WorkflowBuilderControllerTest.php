@@ -8,11 +8,15 @@ use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Dev\SapphireTest;
+use Symbiote\AdvancedWorkflow\Actions\AssignUsersToWorkflowAction;
 use Symbiote\AdvancedWorkflow\Controllers\WorkflowBuilderController;
+use Symbiote\AdvancedWorkflow\DataObjects\WorkflowDefinition;
 
 class WorkflowBuilderControllerTest extends SapphireTest
 {
     protected $usesDatabase = true;
+
+    private const PAGES_SECTION_ACCESS = 'CMS_ACCESS_CMSMain';
 
     protected function setUp(): void
     {
@@ -26,8 +30,7 @@ class WorkflowBuilderControllerTest extends SapphireTest
      */
     public function testWorkflowDataReturnsEmptyPayloadWhenNoWorkflow(): void
     {
-        $page = SiteTree::create(['Title' => 'No workflow']);
-        $page->write();
+        $page = $this->createPage();
 
         $response = $this->callWorkflowData((string)$page->ID, SiteTree::class);
         $body = json_decode((string)$response->getBody(), true);
@@ -35,6 +38,75 @@ class WorkflowBuilderControllerTest extends SapphireTest
         $this->assertSame(200, $response->getStatusCode());
         $this->assertNull($body['workflow']);
         $this->assertSame([], $body['availableWorkflows']);
+    }
+
+    /**
+     * Authors usually hold access to the Pages section only, not to every CMS
+     * section; they must still see the panel and its start button.
+     */
+    public function testWorkflowDataAllowsUsersWithAccessToASingleCmsSection(): void
+    {
+        $definition = $this->createDefinition('Apply for approval');
+        $page = $this->createPage(['WorkflowDefinitionID' => $definition->ID]);
+        $this->logInWithPermission(WorkflowBuilderControllerTest::PAGES_SECTION_ACCESS);
+
+        $response = $this->callWorkflowData((string)$page->ID, SiteTree::class);
+        $body = json_decode((string)$response->getBody(), true);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame(
+            [['id' => (int)$definition->ID, 'title' => 'Apply for approval']],
+            $body['availableWorkflows']
+        );
+    }
+
+    public function testWorkflowDataPrefersTheDefinitionsInitialButtonText(): void
+    {
+        $definition = $this->createDefinition('Apply for approval', 'Send for review');
+        $page = $this->createPage(['WorkflowDefinitionID' => $definition->ID]);
+
+        $body = json_decode((string)$this->callWorkflowData((string)$page->ID, SiteTree::class)->getBody(), true);
+
+        $this->assertSame('Send for review', $body['availableWorkflows'][0]['title']);
+    }
+
+    /**
+     * Starting a workflow saves the record, so it is only offered to users who
+     * may edit it.
+     */
+    public function testWorkflowDataOffersNoWorkflowsWhenTheUserCannotEditTheRecord(): void
+    {
+        $definition = $this->createDefinition('Apply for approval');
+        $page = $this->createPage([
+            'WorkflowDefinitionID' => $definition->ID,
+            'CanEditType' => 'OnlyTheseUsers',
+        ]);
+        $this->logInWithPermission(WorkflowBuilderControllerTest::PAGES_SECTION_ACCESS);
+
+        $body = json_decode((string)$this->callWorkflowData((string)$page->ID, SiteTree::class)->getBody(), true);
+
+        $this->assertSame([], $body['availableWorkflows']);
+    }
+
+    public function testWorkflowDataForbidsUsersWithoutCmsAccess(): void
+    {
+        $page = $this->createPage();
+        $this->logInWithPermission('NOT_A_CMS_PERMISSION');
+
+        $this->assertSame(403, $this->callWorkflowData((string)$page->ID, SiteTree::class)->getStatusCode());
+    }
+
+    public function testWorkflowDataForbidsRecordsTheUserCannotView(): void
+    {
+        $page = $this->createPage(['CanViewType' => 'OnlyTheseUsers']);
+        $this->logInWithPermission(WorkflowBuilderControllerTest::PAGES_SECTION_ACCESS);
+
+        $this->assertSame(403, $this->callWorkflowData((string)$page->ID, SiteTree::class)->getStatusCode());
+    }
+
+    public function testWorkflowDataReportsMissingRecord(): void
+    {
+        $this->assertSame(404, $this->callWorkflowData('99999', SiteTree::class)->getStatusCode());
     }
 
     /**
@@ -51,7 +123,7 @@ class WorkflowBuilderControllerTest extends SapphireTest
 
     public function testWorkflowDataRejectsNonDataObjectClassName(): void
     {
-        $response = $this->callWorkflowData('1', self::class);
+        $response = $this->callWorkflowData('1', WorkflowBuilderControllerTest::class);
 
         $this->assertSame(400, $response->getStatusCode());
     }
@@ -62,18 +134,32 @@ class WorkflowBuilderControllerTest extends SapphireTest
         $this->assertSame(400, $this->callWorkflowData('1', '')->getStatusCode());
     }
 
-    public function testStartWorkflowRejectsUnknownClassName(): void
+    /**
+     * @param array<string, mixed> $fields
+     */
+    private function createPage(array $fields = []): SiteTree
     {
-        $response = $this->callStartWorkflow('1', 'SilverStripe\\\\CMS\\\\Model\\\\SiteTree');
+        $page = SiteTree::create(array_merge(['Title' => 'Workflow target'], $fields));
+        $page->write();
 
-        $this->assertSame(400, $response->getStatusCode());
+        return $page;
     }
 
-    public function testStartWorkflowReportsMissingRecord(): void
+    private function createDefinition(string $initialActionTitle, string $buttonText = ''): WorkflowDefinition
     {
-        $response = $this->callStartWorkflow('99999', SiteTree::class);
+        $definition = WorkflowDefinition::create([
+            'Title' => 'Two-Step',
+            'InitialActionButtonText' => $buttonText,
+        ]);
+        $definition->write();
 
-        $this->assertSame(404, $response->getStatusCode());
+        AssignUsersToWorkflowAction::create([
+            'Title' => $initialActionTitle,
+            'WorkflowDefID' => $definition->ID,
+            'Sort' => 1,
+        ])->write();
+
+        return $definition;
     }
 
     private function callWorkflowData(string $id, string $className): HTTPResponse
@@ -86,17 +172,9 @@ class WorkflowBuilderControllerTest extends SapphireTest
         return $this->controller($request)->workflowData($request);
     }
 
-    private function callStartWorkflow(string $recordId, string $className): HTTPResponse
-    {
-        $body = json_encode(['RecordID' => $recordId, 'ClassName' => $className, 'DefinitionID' => 0]);
-        $request = new HTTPRequest('POST', 'workflow-admin/startWorkflow', [], [], (string)$body);
-
-        return $this->controller($request)->startWorkflow($request);
-    }
-
     private function controller(HTTPRequest $request): WorkflowBuilderController
     {
-        $controller = new WorkflowBuilderController();
+        $controller = WorkflowBuilderController::create();
         $controller->setRequest($request);
 
         return $controller;

@@ -213,7 +213,11 @@ class CreateExampleWorkflowTask extends BuildTask
         $definition->RemindDays = 3;
         $definition->write();
 
-        $output->writeln(sprintf('Created workflow definition "%s" (ID: %d)', CreateExampleWorkflowTask::DEFINITION_TITLE, $definition->ID));
+        $output->writeln(sprintf(
+            'Created workflow definition "%s" (ID: %d)',
+            CreateExampleWorkflowTask::DEFINITION_TITLE,
+            $definition->ID
+        ));
 
         $this->attachGroups($definition, $output);
 
