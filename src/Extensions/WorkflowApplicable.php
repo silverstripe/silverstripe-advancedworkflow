@@ -10,6 +10,7 @@ use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\Forms\GridField\GridFieldConfig_Base;
 use SilverStripe\Forms\GridField\GridFieldDetailForm;
 use SilverStripe\Forms\GridField\GridFieldEditButton;
+use SilverStripe\Forms\HiddenField;
 use SilverStripe\Forms\ListboxField;
 use SilverStripe\Forms\ReadonlyField;
 use SilverStripe\ORM\CMSPreviewable;
@@ -121,6 +122,10 @@ class WorkflowApplicable extends Extension
         if (!$this->owner->hasMethod('getSettingsFields')) {
             $this->updateFields($fields);
         }
+
+        // Carries the chosen definition to AdvancedWorkflowExtension::startworkflow()
+        // when a workflow is started from the edit form.
+        $fields->push(HiddenField::create('TriggeredWorkflowID'));
     }
 
     public function updateFields(FieldList $fields)

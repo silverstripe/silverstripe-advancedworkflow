@@ -3,10 +3,10 @@ import StepTracker from './StepTracker';
 import ActivityFeed from './ActivityFeed';
 import Icon from './Icon';
 import FieldLabel from './FieldLabel';
+import { WORKFLOW_FORM_ACTION } from '../lib/cmsForm';
 
-const WorkflowDetailPanel = ({ data, onClose, onTransition, onRefresh }) => {
+const WorkflowDetailPanel = ({ data, onClose, onTransition }) => {
   const [comment, setComment] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const panelRef = useRef(null);
 
   const isWorkflowRejected = data?.isRejected === true;
@@ -28,16 +28,8 @@ const WorkflowDetailPanel = ({ data, onClose, onTransition, onRefresh }) => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const handleTransition = async (transitionId) => {
-    setIsSubmitting(true);
-
-    try {
-      await onTransition(transitionId, comment);
-      setComment('');
-      onRefresh();
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleTransition = (button, transitionId) => {
+    onTransition(button, transitionId, comment);
   };
 
   if (!data) return null;
@@ -58,9 +50,8 @@ const WorkflowDetailPanel = ({ data, onClose, onTransition, onRefresh }) => {
         <div className={`workflow-detail__header ${isWorkflowRejected ? 'workflow-detail__header--rejected' : ''}`}>
           <div className="workflow-detail__title">
             <span
-              className="workflow-detail__indicator"
+              className={`workflow-detail__indicator ${isWorkflowRejected ? 'workflow-detail__indicator--rejected' : ''}`}
               aria-hidden="true"
-              style={{ color: isWorkflowRejected ? '#c62828' : undefined }}
             >
               <Icon name={isWorkflowRejected ? 'cross' : 'dot'} />
             </span>
@@ -124,9 +115,9 @@ const WorkflowDetailPanel = ({ data, onClose, onTransition, onRefresh }) => {
                 {data.nextTransitions.map((t) => (
                   <button
                     key={t.id}
+                    name={WORKFLOW_FORM_ACTION.UPDATE}
                     className="workflow-detail__btn workflow-detail__btn--next"
-                    onClick={() => handleTransition(t.id)}
-                    disabled={isSubmitting}
+                    onClick={(e) => handleTransition(e.currentTarget, t.id)}
                     type="button"
                   >
                     <Icon name="check" /> {t.title}
@@ -143,9 +134,9 @@ const WorkflowDetailPanel = ({ data, onClose, onTransition, onRefresh }) => {
                 {data.backTransitions.map((t) => (
                   <button
                     key={t.id}
+                    name={WORKFLOW_FORM_ACTION.UPDATE}
                     className="workflow-detail__btn workflow-detail__btn--back"
-                    onClick={() => handleTransition(t.id)}
-                    disabled={isSubmitting}
+                    onClick={(e) => handleTransition(e.currentTarget, t.id)}
                     type="button"
                   >
                     <Icon name="arrow-left" /> {t.title}
@@ -168,7 +159,6 @@ const WorkflowDetailPanel = ({ data, onClose, onTransition, onRefresh }) => {
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Add feedback or notes for the team..."
                 rows={3}
-                disabled={isSubmitting}
               />
             </div>
           )}

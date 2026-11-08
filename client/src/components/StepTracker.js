@@ -1,13 +1,6 @@
 import React from 'react';
 import Icon from './Icon';
 
-const STATUS_COLORS = Object.freeze({
-  completed: '#2e7d32',
-  active: '#1976d2',
-  pending: '#9e9e9e',
-  rejected: '#c62828',
-});
-
 const STATUS_LABELS = Object.freeze({
   completed: 'Completed',
   active: 'Current step',
@@ -59,10 +52,7 @@ const StepTracker = ({ steps, currentIndex, compact, isRejected }) => {
                 aria-current={i === currentIndex ? 'step' : undefined}
                 title={tooltipText}
               >
-                <span
-                  className="workflow-tracker__dot"
-                  style={{ backgroundColor: STATUS_COLORS[status] }}
-                >
+                <span className="workflow-tracker__dot">
                   {renderDotMark(status)}
                 </span>
               </div>
@@ -103,10 +93,7 @@ const StepTracker = ({ steps, currentIndex, compact, isRejected }) => {
               aria-current={i === currentIndex ? 'step' : undefined}
               title={tooltipText}
             >
-              <span
-                className="workflow-tracker__dot"
-                style={{ backgroundColor: STATUS_COLORS[status] }}
-              >
+              <span className="workflow-tracker__dot">
                 {renderDotMark(status) || i + 1}
               </span>
               <span className="workflow-tracker__label">{step.title}</span>

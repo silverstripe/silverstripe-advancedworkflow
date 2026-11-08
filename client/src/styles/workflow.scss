@@ -120,6 +120,26 @@ $transition-normal: 0.25s ease;
 
   &__indicator {
     font-size: 1rem;
+
+    &--info {
+      color: $cms-text-link;
+    }
+
+    &--warning {
+      color: $cms-text-warning;
+    }
+
+    &--modified {
+      color: $cms-text-modified;
+    }
+
+    &--success {
+      color: $cms-text-success;
+    }
+
+    &--danger {
+      color: $cms-text-danger;
+    }
   }
 
   &__status {
@@ -493,6 +513,10 @@ $transition-normal: 0.25s ease;
   &__indicator {
     color: $color-warning;
     font-size: 1rem;
+
+    &--rejected {
+      color: $cms-text-danger;
+    }
   }
 
   &__close {

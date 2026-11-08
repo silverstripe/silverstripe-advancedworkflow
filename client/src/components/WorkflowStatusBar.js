@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import StepTracker from './StepTracker';
 import Icon from './Icon';
+import { WORKFLOW_FORM_ACTION } from '../lib/cmsForm';
 
 const WORKFLOW_STATUS = Object.freeze({
   ACTIVE: 'Active',
@@ -9,17 +10,25 @@ const WORKFLOW_STATUS = Object.freeze({
   CANCELLED: 'Cancelled',
 });
 
+// Tones map to `workflow-bar__indicator--<tone>` colour modifiers.
+const TONE = Object.freeze({
+  WARNING: 'warning',
+  MODIFIED: 'modified',
+  SUCCESS: 'success',
+  DANGER: 'danger',
+});
+
 const STATUS_INDICATOR = Object.freeze({
-  [WORKFLOW_STATUS.ACTIVE]: { color: '#f9a825', icon: 'dot', label: 'In Progress' },
-  [WORKFLOW_STATUS.PAUSED]: { color: '#ff6f00', icon: 'pause', label: 'Paused' },
-  [WORKFLOW_STATUS.COMPLETE]: { color: '#2e7d32', icon: 'check', label: 'Complete' },
-  [WORKFLOW_STATUS.CANCELLED]: { color: '#c62828', icon: 'cross', label: 'Cancelled' },
+  [WORKFLOW_STATUS.ACTIVE]: { tone: TONE.WARNING, icon: 'dot', label: 'In Progress' },
+  [WORKFLOW_STATUS.PAUSED]: { tone: TONE.MODIFIED, icon: 'pause', label: 'Paused' },
+  [WORKFLOW_STATUS.COMPLETE]: { tone: TONE.SUCCESS, icon: 'check', label: 'Complete' },
+  [WORKFLOW_STATUS.CANCELLED]: { tone: TONE.DANGER, icon: 'cross', label: 'Cancelled' },
 });
 
 const isRejected = (data) => data?.isRejected === true;
 const isPublished = (data) => data?.current === 'Published';
 
-const WorkflowStatusBar = ({ data, onViewDetails, onTransition, onStartWorkflow, actionLoading }) => {
+const WorkflowStatusBar = ({ data, onViewDetails, onTransition, onStartWorkflow }) => {
   const [comment, setComment] = useState('');
   const [showComment, setShowComment] = useState(false);
 
@@ -42,16 +51,16 @@ const WorkflowStatusBar = ({ data, onViewDetails, onTransition, onStartWorkflow,
 
   let statusLabel = status.label;
   let statusIcon = status.icon;
-  let statusColor = status.color;
+  let statusTone = status.tone;
 
   if (rejected) {
     statusLabel = 'Rejected';
     statusIcon = 'cross';
-    statusColor = '#c62828';
+    statusTone = TONE.DANGER;
   } else if (published) {
     statusLabel = 'Published';
     statusIcon = 'check';
-    statusColor = '#2e7d32';
+    statusTone = TONE.SUCCESS;
   }
 
   const nextTransitions = data.nextTransitions || [];
@@ -60,11 +69,9 @@ const WorkflowStatusBar = ({ data, onViewDetails, onTransition, onStartWorkflow,
   const hasActions = !isFinished && (nextTransitions.length > 0 || backTransitions.length > 0);
   const allowCommenting = data.allowCommenting === true;
 
-  const handleAction = (transitionId) => {
+  const handleAction = (button, transitionId) => {
     if (onTransition) {
-      onTransition(transitionId, comment);
-      setComment('');
-      setShowComment(false);
+      onTransition(button, transitionId, comment);
     }
   };
 
@@ -74,8 +81,7 @@ const WorkflowStatusBar = ({ data, onViewDetails, onTransition, onStartWorkflow,
       <div className="workflow-bar__top">
         <div className="workflow-bar__left">
           <span
-            className="workflow-bar__indicator"
-            style={{ color: statusColor }}
+            className={`workflow-bar__indicator workflow-bar__indicator--${statusTone}`}
             aria-hidden="true"
           >
             <Icon name={statusIcon} />
@@ -147,9 +153,9 @@ const WorkflowStatusBar = ({ data, onViewDetails, onTransition, onStartWorkflow,
             {nextTransitions.map((t) => (
               <button
                 key={t.id}
+                name={WORKFLOW_FORM_ACTION.UPDATE}
                 className="workflow-bar__action-btn workflow-bar__action-btn--approve"
-                onClick={() => handleAction(t.id)}
-                disabled={actionLoading}
+                onClick={(e) => handleAction(e.currentTarget, t.id)}
                 type="button"
               >
                 {t.title}
@@ -158,9 +164,9 @@ const WorkflowStatusBar = ({ data, onViewDetails, onTransition, onStartWorkflow,
             {backTransitions.map((t) => (
               <button
                 key={t.id}
+                name={WORKFLOW_FORM_ACTION.UPDATE}
                 className="workflow-bar__action-btn workflow-bar__action-btn--reject"
-                onClick={() => handleAction(t.id)}
-                disabled={actionLoading}
+                onClick={(e) => handleAction(e.currentTarget, t.id)}
                 type="button"
               >
                 {t.title}
@@ -180,9 +186,9 @@ const WorkflowStatusBar = ({ data, onViewDetails, onTransition, onStartWorkflow,
             {availableWorkflows.map((wf) => (
               <button
                 key={wf.id}
+                name={WORKFLOW_FORM_ACTION.START}
                 className="workflow-bar__action-btn workflow-bar__action-btn--approve"
-                onClick={() => onStartWorkflow && onStartWorkflow(wf.id)}
-                disabled={actionLoading}
+                onClick={(e) => onStartWorkflow && onStartWorkflow(e.currentTarget, wf.id)}
                 type="button"
               >
                 {wf.title}
