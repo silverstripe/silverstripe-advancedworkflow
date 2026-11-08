@@ -2,7 +2,6 @@
 
 // ============================================================
 // Silverstripe CMS design tokens
-//
 // Values mirror the "Silverstripe CMS" Figma styleguide (Colours,
 // Typography and Components pages) so the workflow UI reads as part of
 // the CMS rather than a separate app. Token names follow the Figma style
@@ -28,7 +27,7 @@ $cms-grey-500: #6f84a7;
 $cms-grey-600: #566b8d;
 $cms-grey-700: #43536d;
 $cms-grey-800: #303b4d;
-$cms-white: #ffffff;
+$cms-white: #fff;
 
 // Text
 $cms-text-default: $cms-grey-700;

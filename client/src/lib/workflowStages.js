@@ -76,7 +76,10 @@ const supportOrder = (type) => SUPPORT_TYPES.indexOf(type);
 // an existing action), so cluster steps are always created fresh
 // and never type-converted from an unrelated step.
 let idCounter = 0;
-const uid = (type) => `new-${type}-${Date.now()}-${idCounter++}`;
+const uid = (type) => {
+  idCounter += 1;
+  return `new-${type}-${Date.now()}-${idCounter}`;
+};
 
 const makeTransition = (title, nextStepId) => ({
   title,
@@ -264,16 +267,12 @@ const setForwardTarget = (step, nextStepId) => {
 
 /** Find the shared rejection entry (an existing approval's reject target), if any. */
 const findRejectTargetId = (steps) => {
-  for (const step of steps) {
-    if (step.type !== STEP_TYPES.APPROVAL) {
-      continue;
-    }
-    const reject = rejectTransition(step);
-    if (reject && reject.nextStepId) {
-      return reject.nextStepId;
-    }
-  }
-  return '';
+  const reject = steps
+    .filter((step) => step.type === STEP_TYPES.APPROVAL)
+    .map(rejectTransition)
+    .find((transition) => transition && transition.nextStepId);
+
+  return reject ? reject.nextStepId : '';
 };
 
 /**
@@ -304,6 +303,13 @@ const buildReviewCluster = (rejectTargetId) => {
   return { cluster: [assign, notify, approval], cancel, entryId: assign.id, approvalStep: approval };
 };
 
+/** Index just before the first rejection step, so appended happy-path steps precede the reject path. */
+const rejectionInsertIndex = (steps) => {
+  const rejectIds = collectRejectReachable(steps);
+  const idx = steps.findIndex((step) => rejectIds.has(step.id));
+  return idx < 0 ? steps.length : idx;
+};
+
 /**
  * Insert a new review stage. `afterStageId` / `beforeStageId` name
  * the neighbouring stages (from buildStages); pass null for the
@@ -326,9 +332,12 @@ export const insertReviewStage = (steps, at = {}) => {
   const { cluster, cancel, entryId, approvalStep } = buildReviewCluster(findRejectTargetId(next));
 
   // Where the previous stage currently flows (so the new gate can take it over).
-  const successorId = beforeStage
-    ? entryStepId(beforeStage)
-    : (afterStage ? afterStage.approveTargetId : '');
+  let successorId = '';
+  if (beforeStage) {
+    successorId = entryStepId(beforeStage);
+  } else if (afterStage) {
+    successorId = afterStage.approveTargetId;
+  }
 
   setForwardTarget(approvalStep, successorId);
 
@@ -348,13 +357,6 @@ export const insertReviewStage = (steps, at = {}) => {
   }
 
   return next;
-};
-
-/** Index just before the first rejection step, so appended happy-path steps precede the reject path. */
-const rejectionInsertIndex = (steps) => {
-  const rejectIds = collectRejectReachable(steps);
-  const idx = steps.findIndex((step) => rejectIds.has(step.id));
-  return idx < 0 ? steps.length : idx;
 };
 
 /**
@@ -421,38 +423,22 @@ export const removeStage = (steps, stageId) => {
 };
 
 /**
- * Toggle a support step (assign/notify) on or off within a review
- * stage. Turning it off removes that step and rewires the chain;
- * turning it on inserts a fresh support step at the front of the
- * stage and points it at what the entry used to be.
- *
- * @param {Array} steps
- * @param {string} stageId
- * @param {string} supportType STEP_TYPES.ASSIGN | STEP_TYPES.NOTIFICATION
- * @param {boolean} enabled
- * @returns {Array} new steps
+ * Point every forward transition that currently targets `fromId` at
+ * `toId` instead, skipping steps in `exceptIds`. Used to splice a
+ * step into (or out of) a linear chain without touching reject edges
+ * or transition ids.
  */
-export const setSupportEnabled = (steps, stageId, supportType, enabled) => {
-  const next = cloneSteps(steps);
-  const model = buildStages(next);
-  const stage = model.stages.find((s) => s.id === stageId);
-
-  if (!stage || stage.kind !== STAGE_KIND.REVIEW) {
-    return next;
+const rewireInboundTo = (steps, fromId, toId, exceptIds) => steps.map((step) => {
+  if (exceptIds.includes(step.id)) {
+    return step;
   }
-
-  const existing = stage.support.find((s) => s.type === supportType);
-
-  if (enabled && !existing) {
-    return addSupportStep(next, stage, supportType);
-  }
-
-  if (!enabled && existing) {
-    return removeSupportStep(next, existing);
-  }
-
-  return next;
-};
+  return {
+    ...step,
+    transitions: transitionsOf(step).map((t) => (
+      t.nextStepId === fromId && !isRejectTransition(t) ? { ...t, nextStepId: toId } : t
+    )),
+  };
+});
 
 /**
  * Insert a fresh support step into a stage in canonical order
@@ -486,19 +472,35 @@ const removeSupportStep = (steps, supportStep) => {
 };
 
 /**
- * Point every forward transition that currently targets `fromId` at
- * `toId` instead, skipping steps in `exceptIds`. Used to splice a
- * step into (or out of) a linear chain without touching reject edges
- * or transition ids.
+ * Toggle a support step (assign/notify) on or off within a review
+ * stage. Turning it off removes that step and rewires the chain;
+ * turning it on inserts a fresh support step at the front of the
+ * stage and points it at what the entry used to be.
+ *
+ * @param {Array} steps
+ * @param {string} stageId
+ * @param {string} supportType STEP_TYPES.ASSIGN | STEP_TYPES.NOTIFICATION
+ * @param {boolean} enabled
+ * @returns {Array} new steps
  */
-const rewireInboundTo = (steps, fromId, toId, exceptIds) => steps.map((step) => {
-  if (exceptIds.includes(step.id)) {
-    return step;
+export const setSupportEnabled = (steps, stageId, supportType, enabled) => {
+  const next = cloneSteps(steps);
+  const model = buildStages(next);
+  const stage = model.stages.find((s) => s.id === stageId);
+
+  if (!stage || stage.kind !== STAGE_KIND.REVIEW) {
+    return next;
   }
-  return {
-    ...step,
-    transitions: transitionsOf(step).map((t) => (
-      t.nextStepId === fromId && !isRejectTransition(t) ? { ...t, nextStepId: toId } : t
-    )),
-  };
-});
+
+  const existing = stage.support.find((s) => s.type === supportType);
+
+  if (enabled && !existing) {
+    return addSupportStep(next, stage, supportType);
+  }
+
+  if (!enabled && existing) {
+    return removeSupportStep(next, existing);
+  }
+
+  return next;
+};

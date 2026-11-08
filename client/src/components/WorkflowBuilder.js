@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useId } from 'react';
 import Icon from './Icon';
+import FieldLabel from './FieldLabel';
 import MultiSelect from './MultiSelect';
 import StageCard from './StageCard';
 import {
@@ -13,6 +14,7 @@ import {
   setSupportEnabled,
 } from '../lib/workflowStages';
 import { CONFIG_FIELDS, TRANSITION_TYPES, metaFor } from '../lib/stepMeta';
+import onActivateKey from '../lib/keyboard';
 
 const API_BASE = '/workflow-admin';
 
@@ -28,6 +30,8 @@ export default function WorkflowBuilder({ definitionId }) {
   const [userLabels, setUserLabels] = useState({});
   const [steps, setSteps] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
+  const idBase = useId();
+  const fieldId = (...parts) => [idBase, ...parts].join('-');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState(null);
 
@@ -171,10 +175,11 @@ export default function WorkflowBuilder({ definitionId }) {
 
   // ---- Right-panel config editors (shared with raw steps) ----
 
-  const renderMultiSelect = (source, selectedIds, onChange) => {
+  const renderMultiSelect = (source, selectedIds, onChange, inputId) => {
     if (source === 'users') {
       return (
         <MultiSelect
+          inputId={inputId}
           value={selectedIds}
           onChange={onChange}
           onSearch={searchUsers}
@@ -186,6 +191,7 @@ export default function WorkflowBuilder({ definitionId }) {
 
     return (
       <MultiSelect
+        inputId={inputId}
         options={meta.groups || {}}
         value={selectedIds}
         onChange={onChange}
@@ -196,14 +202,15 @@ export default function WorkflowBuilder({ definitionId }) {
 
   const renderConfigField = (step, field) => {
     const value = (step.config || {})[field.key];
+    const id = fieldId('config', field.key);
 
     if (field.input === 'multiselect') {
-      return renderMultiSelect(field.source, value, (ids) => updateConfig(step.id, field.key, ids));
+      return renderMultiSelect(field.source, value, (ids) => updateConfig(step.id, field.key, ids), id);
     }
 
     if (field.input === 'select') {
       return (
-        <select value={value ?? ''} onChange={(e) => updateConfig(step.id, field.key, e.target.value)}>
+        <select id={id} value={value ?? ''} onChange={(e) => updateConfig(step.id, field.key, e.target.value)}>
           {field.options.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
@@ -213,8 +220,9 @@ export default function WorkflowBuilder({ definitionId }) {
 
     if (field.input === 'checkbox') {
       return (
-        <label className="wf-builder__checkbox">
+        <label className="wf-builder__checkbox" htmlFor={id}>
           <input
+            id={id}
             type="checkbox"
             checked={Boolean(value)}
             onChange={(e) => updateConfig(step.id, field.key, e.target.checked)}
@@ -227,6 +235,7 @@ export default function WorkflowBuilder({ definitionId }) {
     if (field.input === 'textarea') {
       return (
         <textarea
+          id={id}
           value={value ?? ''}
           onChange={(e) => updateConfig(step.id, field.key, e.target.value)}
           rows={4}
@@ -237,6 +246,7 @@ export default function WorkflowBuilder({ definitionId }) {
     if (field.input === 'number') {
       return (
         <input
+          id={id}
           type="number"
           min="0"
           value={value ?? 0}
@@ -247,6 +257,7 @@ export default function WorkflowBuilder({ definitionId }) {
 
     return (
       <input
+        id={id}
         type="text"
         value={value ?? ''}
         onChange={(e) => updateConfig(step.id, field.key, e.target.value)}
@@ -316,8 +327,9 @@ export default function WorkflowBuilder({ definitionId }) {
       <details className="wf-builder__transition-advanced">
         <summary>Advanced: type &amp; permissions</summary>
         <div className="wf-builder__edit-row">
-          <label>Transition type</label>
+          <FieldLabel htmlFor={fieldId(role, 'type')}>Transition type</FieldLabel>
           <select
+            id={fieldId(role, 'type')}
             value={transition.transitionType || 'Active'}
             onChange={(e) => patchTransition(step, role, { transitionType: e.target.value })}
           >
@@ -325,13 +337,23 @@ export default function WorkflowBuilder({ definitionId }) {
           </select>
         </div>
         <div className="wf-builder__edit-row">
-          <label>Restrict to groups</label>
+          <FieldLabel htmlFor={fieldId(role, 'groups')}>Restrict to groups</FieldLabel>
           <p className="wf-builder__field-help">Leave empty to allow anyone assigned to the step.</p>
-          {renderMultiSelect('groups', transition.groupIds, (ids) => patchTransition(step, role, { groupIds: ids }))}
+          {renderMultiSelect(
+            'groups',
+            transition.groupIds,
+            (ids) => patchTransition(step, role, { groupIds: ids }),
+            fieldId(role, 'groups')
+          )}
         </div>
         <div className="wf-builder__edit-row">
-          <label>Restrict to users</label>
-          {renderMultiSelect('users', transition.userIds, (ids) => patchTransition(step, role, { userIds: ids }))}
+          <FieldLabel htmlFor={fieldId(role, 'users')}>Restrict to users</FieldLabel>
+          {renderMultiSelect(
+            'users',
+            transition.userIds,
+            (ids) => patchTransition(step, role, { userIds: ids }),
+            fieldId(role, 'users')
+          )}
         </div>
       </details>
     );
@@ -339,8 +361,9 @@ export default function WorkflowBuilder({ definitionId }) {
 
   const renderTransitionRow = (step, role, labelNode, emptyOption) => (
     <div className="wf-builder__edit-row wf-builder__edit-row--branch">
-      <label>{labelNode}</label>
+      <FieldLabel htmlFor={fieldId(role, 'target')}>{labelNode}</FieldLabel>
       <select
+        id={fieldId(role, 'target')}
         value={getTransitionTarget(step, role)}
         onChange={(e) => setTransitionTarget(step, role, e.target.value)}
       >
@@ -389,9 +412,10 @@ export default function WorkflowBuilder({ definitionId }) {
         key={step.id}
         className={`wf-builder__raw-step ${selectedId === step.id ? 'wf-builder__raw-step--selected' : ''}`}
         onClick={() => setSelectedId(step.id)}
+        onKeyDown={onActivateKey(() => setSelectedId(step.id))}
         role="button"
         tabIndex={0}
-        aria-selected={selectedId === step.id}
+        aria-pressed={selectedId === step.id}
       >
         <span className="wf-builder__substep-icon"><Icon name={stepMeta.icon} /></span>
         <div className="wf-builder__substep-info">
@@ -549,8 +573,9 @@ export default function WorkflowBuilder({ definitionId }) {
               <p className="wf-builder__edit-desc">{metaFor(selectedStep.type).description}</p>
 
               <div className="wf-builder__edit-row">
-                <label>Step name</label>
+                <FieldLabel htmlFor={fieldId('title')}>Step name</FieldLabel>
                 <input
+                  id={fieldId('title')}
                   value={selectedStep.title}
                   onChange={(e) => updateStep(selectedStep.id, { title: e.target.value })}
                 />
@@ -561,7 +586,9 @@ export default function WorkflowBuilder({ definitionId }) {
                   <div className="wf-builder__edit-divider" />
                   {selectedConfig.map((field) => (
                     <div className="wf-builder__edit-row" key={field.key}>
-                      {field.input !== 'checkbox' && <label>{field.label}</label>}
+                      {field.input !== 'checkbox' && (
+                        <FieldLabel htmlFor={fieldId('config', field.key)}>{field.label}</FieldLabel>
+                      )}
                       {field.help && <p className="wf-builder__field-help">{field.help}</p>}
                       {renderConfigField(selectedStep, field)}
                     </div>
@@ -580,7 +607,7 @@ export default function WorkflowBuilder({ definitionId }) {
               ) : (
                 <>
                   <div className="wf-builder__edit-divider" />
-                  <label>What happens after this step?</label>
+                  <p className="wf-builder__edit-label">What happens after this step?</p>
                   {renderRawTransitions(selectedStep)}
 
                   <div className="wf-builder__edit-divider" />

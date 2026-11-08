@@ -239,7 +239,7 @@ $transition-normal: 0.25s ease;
 
   &__action-btn {
     padding: 0.375rem 0.875rem;
-    border: none;
+    border: 0;
     border-radius: $radius-sm;
     font-size: 0.9375rem;
     font-weight: 500;
@@ -433,15 +433,17 @@ $transition-normal: 0.25s ease;
 // ============================================================
 .workflow-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.4);
   z-index: 9999;
   display: flex;
   justify-content: flex-end;
   animation: workflow-fade-in $transition-normal;
+
+  &__backdrop {
+    position: absolute;
+    inset: 0;
+  }
 }
 
 @keyframes workflow-fade-in {
@@ -455,6 +457,7 @@ $transition-normal: 0.25s ease;
 }
 
 .workflow-detail {
+  position: relative;
   width: 26rem;
   max-width: 90vw;
   height: 100%;
@@ -494,7 +497,7 @@ $transition-normal: 0.25s ease;
 
   &__close {
     background: none;
-    border: none;
+    border: 0;
     font-size: 1.125rem;
     cursor: pointer;
     padding: 0.25rem;
@@ -575,7 +578,7 @@ $transition-normal: 0.25s ease;
 
   &__btn {
     padding: 0.5rem 1rem;
-    border: none;
+    border: 0;
     border-radius: $radius-md;
     font-size: 1rem;
     font-weight: 500;
@@ -677,7 +680,7 @@ $transition-normal: 0.25s ease;
     border-bottom: 0.0625rem solid color.adjust($color-border, $lightness: 5%);
 
     &:last-child {
-      border-bottom: none;
+      border-bottom: 0;
     }
 
     &--expanded {
@@ -716,7 +719,7 @@ $transition-normal: 0.25s ease;
     width: 100%;
     padding: 0.5rem 0.375rem;
     background: none;
-    border: none;
+    border: 0;
     cursor: pointer;
     text-align: left;
     font-family: $font-stack;
@@ -853,7 +856,6 @@ $transition-normal: 0.25s ease;
 
 // ============================================================
 // Workflow Builder (column layout: stage flow + content area)
-//
 // Styled after the Silverstripe CMS styleguide: CMS buttons, form
 // fields and tags, with each stage's steps drawn as a decision-tree
 // branch (elbow connectors from the stage number down to each step).
@@ -888,6 +890,7 @@ $wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
 // CMS "Secondary button" (text-only): used for low-emphasis actions.
 @mixin wf-btn-secondary {
   @include wf-body-text;
+
   display: inline-flex;
   align-items: center;
   gap: rem(6);
@@ -961,6 +964,7 @@ $wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
 // CMS form control (input/select/textarea).
 @mixin wf-form-control {
   @include wf-body-text;
+
   width: 100%;
   padding: rem(8) rem(12);
   border: rem(1) solid $cms-border-input;
@@ -990,7 +994,7 @@ $wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
 @mixin wf-icon-button {
   flex-shrink: 0;
   padding: rem(4);
-  border: none;
+  border: 0;
   border-radius: $cms-radius-button;
   background: none;
   color: $cms-text-light;
@@ -1008,6 +1012,7 @@ $wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
 
 .wf-builder {
   @include wf-body-text;
+
   color: $cms-text-default;
 
   &__header {
@@ -1057,6 +1062,7 @@ $wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
   // Default action button: CMS "Secondary button – Outline".
   &__btn {
     @include wf-btn-secondary;
+
     border-color: $cms-border-outline;
 
     // The one primary action on the screen: CMS "Primary button".
@@ -1094,7 +1100,7 @@ $wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
     gap: rem(20);
     min-height: rem(400);
 
-    @media (max-width: 34rem) {
+    @media (width <= 34rem) {
       flex-direction: column;
     }
   }
@@ -1108,7 +1114,7 @@ $wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
     flex-direction: column;
     gap: rem(8);
 
-    @media (max-width: 34rem) {
+    @media (width <= 34rem) {
       flex-basis: auto;
       width: 100%;
     }
@@ -1202,11 +1208,12 @@ $wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
   // A single step inside a stage (assign, notify, or the gate itself).
   &__substep {
     @include wf-tree-node;
+
     position: relative;
     margin: $wf-tree-gap 0 0 $wf-tree-elbow;
 
     // Elbow connector from the trunk into this card.
-    &::before {
+    &:before {
       content: "";
       position: absolute;
       top: -$wf-tree-gap - rem(1);
@@ -1219,7 +1226,7 @@ $wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
     }
 
     // Trunk continues past this card down to the next sibling.
-    &:not(:last-child)::after {
+    &:not(:last-child):after {
       content: "";
       position: absolute;
       top: -$wf-tree-gap - rem(1);
@@ -1284,6 +1291,7 @@ $wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
   // "Waits for a decision": CMS site-tree tag in the draft/modified palette.
   &__gate-badge {
     @include wf-tag($cms-bg-modified, $cms-text-modified);
+
     flex-shrink: 0;
 
     .wf-icon {
@@ -1305,6 +1313,7 @@ $wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
 
   &__addon-chip {
     @include wf-btn-secondary;
+
     padding: rem(2) rem(8);
     color: $cms-text-link;
 
@@ -1354,6 +1363,7 @@ $wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
 
   &__insert-btn {
     @include wf-btn-secondary;
+
     padding: rem(2) rem(8);
   }
 
@@ -1404,6 +1414,7 @@ $wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
 
   &__raw-step {
     @include wf-tree-node;
+
     margin-bottom: rem(6);
 
     &--selected {
@@ -1523,6 +1534,15 @@ $wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
     background: $cms-border-light;
   }
 
+  // Heading for a group of related controls, styled as a CMS H4.
+  &__edit-label {
+    margin: 0 0 rem(10);
+    font-size: rem(14);
+    font-weight: $cms-font-weight-medium;
+    line-height: rem(22);
+    color: $cms-text-default;
+  }
+
   // Empty states
   &__empty-title {
     margin: 0 0 rem(6);
@@ -1638,7 +1658,7 @@ $wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
     display: inline-flex;
     align-items: center;
     padding: 0;
-    border: none;
+    border: 0;
     background: none;
     color: $cms-text-light;
     font-size: rem(10);
@@ -1657,7 +1677,7 @@ $wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
     flex: 1 1 rem(96);
     min-width: rem(96);
     padding: rem(4) rem(6);
-    border: none;
+    border: 0;
     background: transparent;
     box-shadow: none;
 
@@ -1688,7 +1708,7 @@ $wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
     cursor: pointer;
 
     &:last-child {
-      border-bottom: none;
+      border-bottom: 0;
     }
 
     input[type="checkbox"] {

@@ -1,5 +1,5 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import jQuery from 'jquery';
 import WorkflowPanel from './components/WorkflowPanel';
 import WorkflowBuilder from './components/WorkflowBuilder';
@@ -7,50 +7,52 @@ import WorkflowBuilder from './components/WorkflowBuilder';
 const PANEL_ROOT_ID = 'workflow-panel-root';
 const BUILDER_ROOT_ID = 'workflow-builder-root';
 
-const mountWorkflowPanel = (el) => {
-  if (!el || el.dataset.workflowMounted) return;
+// React roots keyed by their container so PJAX navigation can unmount them.
+const roots = new WeakMap();
 
-  const recordId = el.dataset.recordId;
-  const className = el.dataset.className;
-
-  if (!recordId || !className) return;
+const mount = (el, element) => {
+  if (!el || el.dataset.workflowMounted) {
+    return;
+  }
 
   el.dataset.workflowMounted = 'true';
+  const root = createRoot(el);
+  roots.set(el, root);
+  root.render(element);
+};
 
-  ReactDOM.render(
-    <WorkflowPanel recordID={recordId} className={className} />,
-    el
-  );
+const unmount = (el) => {
+  const root = el ? roots.get(el) : null;
+
+  if (root) {
+    root.unmount();
+    roots.delete(el);
+  }
+};
+
+const mountWorkflowPanel = (el) => {
+  const { recordId, className } = el ? el.dataset : {};
+
+  if (!recordId || !className) {
+    return;
+  }
+
+  mount(el, <WorkflowPanel recordID={recordId} className={className} />);
 };
 
 const mountWorkflowBuilder = (el) => {
-  if (!el || el.dataset.workflowMounted) return;
-
-  el.dataset.workflowMounted = 'true';
-
-  ReactDOM.render(
-    <WorkflowBuilder definitionId={el.dataset.definitionId || null} />,
-    el
-  );
+  mount(el, <WorkflowBuilder definitionId={el ? el.dataset.definitionId || null : null} />);
 };
 
-// Use Entwine to hook into the PJAX content lifecycle.
 // Entwine's onmatch fires whenever a matching element enters the DOM,
-// including after PJAX navigation replaces form content.
+// including after PJAX navigation replaces the edit form.
 jQuery.entwine('ss.workflow', ($) => {
   $(`#${PANEL_ROOT_ID}`).entwine({
     onmatch() {
       mountWorkflowPanel(this[0]);
     },
     onunmatch() {
-      const el = this[0];
-      if (el) {
-        try {
-          ReactDOM.unmountComponentAtNode(el);
-        } catch (e) {
-          // Component may already be unmounted
-        }
-      }
+      unmount(this[0]);
     },
   });
 
@@ -59,14 +61,7 @@ jQuery.entwine('ss.workflow', ($) => {
       mountWorkflowBuilder(this[0]);
     },
     onunmatch() {
-      const el = this[0];
-      if (el) {
-        try {
-          ReactDOM.unmountComponentAtNode(el);
-        } catch (e) {
-          // Component may already be unmounted
-        }
-      }
+      unmount(this[0]);
     },
   });
 });

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import StepTracker from './StepTracker';
 import ActivityFeed from './ActivityFeed';
 import Icon from './Icon';
+import FieldLabel from './FieldLabel';
 
 const WorkflowDetailPanel = ({ data, onClose, onTransition, onRefresh }) => {
   const [comment, setComment] = useState('');
@@ -42,7 +43,9 @@ const WorkflowDetailPanel = ({ data, onClose, onTransition, onRefresh }) => {
   if (!data) return null;
 
   return (
-    <div className="workflow-overlay" onClick={onClose} role="presentation">
+    <div className="workflow-overlay">
+      {/* Mouse-only shortcut; keyboard users close with Escape or the close button. */}
+      <div className="workflow-overlay__backdrop" onClick={onClose} aria-hidden="true" />
       <div
         className="workflow-detail"
         ref={panelRef}
@@ -50,7 +53,6 @@ const WorkflowDetailPanel = ({ data, onClose, onTransition, onRefresh }) => {
         role="dialog"
         aria-label="Workflow details"
         aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className={`workflow-detail__header ${isWorkflowRejected ? 'workflow-detail__header--rejected' : ''}`}>
@@ -109,8 +111,7 @@ const WorkflowDetailPanel = ({ data, onClose, onTransition, onRefresh }) => {
             <StepTracker
               steps={data.steps || []}
               currentIndex={data.currentIndex || 0}
-              compact={true}
-              workflowStatus={data.workflowStatus}
+              compact
               isRejected={isWorkflowRejected}
             />
           </div>
@@ -157,9 +158,9 @@ const WorkflowDetailPanel = ({ data, onClose, onTransition, onRefresh }) => {
           {/* Comment — only shown when action allows it and workflow is active */}
           {data.allowCommenting && !isFinished && (
             <div className="workflow-detail__section">
-              <label className="workflow-detail__label" htmlFor="workflow-comment">
+              <FieldLabel className="workflow-detail__label" htmlFor="workflow-comment">
                 Leave a Comment
-              </label>
+              </FieldLabel>
               <textarea
                 id="workflow-comment"
                 className="workflow-detail__textarea"

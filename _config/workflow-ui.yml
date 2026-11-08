@@ -17,7 +17,7 @@ SilverStripe\Control\Director:
 
 SilverStripe\Admin\LeftAndMain:
   extra_requirements_css:
-    - 'symbiote/silverstripe-advancedworkflow:client/dist/styles.css'
+    - 'symbiote/silverstripe-advancedworkflow:client/dist/styles/workflow-ui.css'
   extra_requirements_javascript:
-    - 'symbiote/silverstripe-advancedworkflow:client/dist/bundle.js'
+    - 'symbiote/silverstripe-advancedworkflow:client/dist/js/workflow-ui.js'
 

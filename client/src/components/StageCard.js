@@ -1,5 +1,6 @@
 import React from 'react';
 import Icon from './Icon';
+import onActivateKey from '../lib/keyboard';
 import { STEP_TYPES, STAGE_KIND } from '../lib/workflowStages';
 import { metaFor } from '../lib/stepMeta';
 
@@ -38,9 +39,10 @@ export default function StageCard({
         key={step.id}
         className={classes}
         onClick={() => onSelectStep(step.id)}
+        onKeyDown={onActivateKey(() => onSelectStep(step.id))}
         role="button"
         tabIndex={0}
-        aria-selected={selectedId === step.id}
+        aria-pressed={selectedId === step.id}
       >
         <span className="wf-builder__substep-icon"><Icon name={meta.icon} /></span>
         <div className="wf-builder__substep-info">

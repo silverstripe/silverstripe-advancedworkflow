@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useId } from 'react';
 import Icon from './Icon';
 
 /**
@@ -16,8 +16,10 @@ import Icon from './Icon';
  *
  * Fully React-controlled (unlike a native <select multiple>, which the CMS
  * auto-enhances and desyncs from React state).
+ *
+ * Pass `inputId` so an external <FieldLabel htmlFor> can label the search box.
  */
-export default function MultiSelect({ options, value, onChange, placeholder = 'Search…', onSearch, labels }) {
+export default function MultiSelect({ options, value, onChange, placeholder = 'Search…', onSearch, labels, inputId }) {
   const isAsync = typeof onSearch === 'function';
   const selected = (value || []).map(String);
   const [query, setQuery] = useState('');
@@ -29,6 +31,7 @@ export default function MultiSelect({ options, value, onChange, placeholder = 'S
   const [labelCache, setLabelCache] = useState({});
   const ref = useRef(null);
   const timer = useRef(null);
+  const optionIdBase = useId();
 
   useEffect(() => {
     const onDocMouseDown = (e) => {
@@ -113,6 +116,7 @@ export default function MultiSelect({ options, value, onChange, placeholder = 'S
           </span>
         ))}
         <input
+          id={inputId}
           className="wf-ms__input"
           type="text"
           value={query}
@@ -131,8 +135,9 @@ export default function MultiSelect({ options, value, onChange, placeholder = 'S
             </div>
           )}
           {!loading && menuOptions.map(([id, name]) => (
-            <label className="wf-ms__option" key={id}>
+            <label className="wf-ms__option" key={id} htmlFor={`${optionIdBase}-${id}`}>
               <input
+                id={`${optionIdBase}-${id}`}
                 type="checkbox"
                 checked={selected.includes(String(id))}
                 onChange={() => toggle(id)}

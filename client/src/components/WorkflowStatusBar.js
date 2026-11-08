@@ -96,7 +96,6 @@ const WorkflowStatusBar = ({ data, onViewDetails, onTransition, onStartWorkflow,
             steps={data.steps || []}
             currentIndex={data.currentIndex || 0}
             compact={false}
-            workflowStatus={data.workflowStatus}
             isRejected={rejected}
           />
         </div>

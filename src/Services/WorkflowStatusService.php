@@ -659,6 +659,7 @@ class WorkflowStatusService
                 : 'action';
 
             $history[] = [
+                'id' => (int)$actionInstance->ID,
                 'title' => $title,
                 'comment' => $comment !== '' ? $comment : null,
                 'date' => $actionInstance->Created,

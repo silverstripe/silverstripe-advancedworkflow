@@ -66,7 +66,12 @@ const ActivityEntry = ({ entry }) => {
 
   return (
     <li
-      className={`workflow-activity__item ${expanded ? 'workflow-activity__item--expanded' : ''} ${isRejection ? 'workflow-activity__item--rejection' : ''} ${hasComment ? 'workflow-activity__item--has-comment' : ''}`}
+      className={[
+        'workflow-activity__item',
+        expanded ? 'workflow-activity__item--expanded' : '',
+        isRejection ? 'workflow-activity__item--rejection' : '',
+        hasComment ? 'workflow-activity__item--has-comment' : '',
+      ].filter(Boolean).join(' ')}
     >
       <button
         className="workflow-activity__toggle"
@@ -141,8 +146,8 @@ const ActivityFeed = ({ history }) => {
   return (
     <div className="workflow-activity" role="log" aria-label="Workflow activity">
       <ul className="workflow-activity__list">
-        {history.map((entry, i) => (
-          <ActivityEntry key={i} entry={entry} />
+        {history.map((entry) => (
+          <ActivityEntry key={entry.id} entry={entry} />
         ))}
       </ul>
     </div>

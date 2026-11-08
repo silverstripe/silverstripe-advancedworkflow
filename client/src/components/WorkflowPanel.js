@@ -3,7 +3,6 @@ import WorkflowStatusBar from './WorkflowStatusBar';
 import WorkflowDetailPanel from './WorkflowDetailPanel';
 import Icon from './Icon';
 import { classifyWorkflowResponse, RESPONSE_NOT_APPLICABLE, RESPONSE_OK } from '../lib/workflowResponse';
-import '../styles/workflow.scss';
 
 const API_BASE = '/workflow-admin';
 

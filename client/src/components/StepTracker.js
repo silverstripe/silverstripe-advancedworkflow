@@ -21,7 +21,7 @@ const renderDotMark = (status) => {
   return null;
 };
 
-const getStepStatus = (step, index, currentIndex, isRejected, workflowStatus) => {
+const getStepStatus = (step, index, currentIndex, isRejected) => {
   // Use backend-provided status directly when available
   if (step.status) {
     return step.status;
@@ -36,7 +36,7 @@ const getStepStatus = (step, index, currentIndex, isRejected, workflowStatus) =>
   return 'pending';
 };
 
-const StepTracker = ({ steps, currentIndex, compact, workflowStatus, isRejected }) => {
+const StepTracker = ({ steps, currentIndex, compact, isRejected }) => {
   if (!steps || steps.length === 0) return null;
 
   if (compact) {
@@ -49,7 +49,7 @@ const StepTracker = ({ steps, currentIndex, compact, workflowStatus, isRejected 
         aria-valuemax={steps.length}
       >
         {steps.map((step, i) => {
-          const status = getStepStatus(step, i, currentIndex, isRejected, workflowStatus);
+          const status = getStepStatus(step, i, currentIndex, isRejected);
           const tooltipText = `${step.title} — ${STATUS_LABELS[status] || status}`;
 
           return (
@@ -93,7 +93,7 @@ const StepTracker = ({ steps, currentIndex, compact, workflowStatus, isRejected 
       aria-valuemax={steps.length}
     >
       {steps.map((step, i) => {
-        const status = getStepStatus(step, i, currentIndex, isRejected, workflowStatus);
+        const status = getStepStatus(step, i, currentIndex, isRejected);
         const tooltipText = `${step.title} — ${STATUS_LABELS[status] || status}`;
 
         return (
