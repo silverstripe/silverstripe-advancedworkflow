@@ -17,6 +17,10 @@ SilverStripe\Security\Member:
     Surname: Executer
     Email: six.executor@localhost
 
+SilverStripe\CMS\Model\SiteTree:
+  WorkflowTarget01:
+    Title: 'Workflow target 01'
+
 SilverStripe\Security\Group:
   BaseAction01Group:
     Title: Approvers
@@ -84,6 +88,11 @@ Symbiote\AdvancedWorkflow\Actions\SimpleApprovalWorkflowAction:
       - =>Symbiote\AdvancedWorkflow\DataObjects\WorkflowTransition.Transition05
       - =>Symbiote\AdvancedWorkflow\DataObjects\WorkflowTransition.Transition06
 
+Symbiote\AdvancedWorkflow\DataObjects\WorkflowAction:
+  EditableAction01:
+    Title: 'Edit by assignees'
+    AllowEditing: 'By Assignees'
+
 Symbiote\AdvancedWorkflow\DataObjects\WorkflowActionInstance:
   ActionInstance01:
     Created: '2014-02-17 16:15:00'
@@ -149,6 +158,8 @@ Symbiote\AdvancedWorkflow\DataObjects\WorkflowActionInstance:
     Created: '2014-02-17 16:15:00'
     Finished: 1
     BaseAction: =>Symbiote\AdvancedWorkflow\Actions\SimpleApprovalWorkflowAction.BaseAction032
+  ActionInstance17:
+    BaseAction: =>Symbiote\AdvancedWorkflow\DataObjects\WorkflowAction.EditableAction01
 
 Symbiote\AdvancedWorkflow\DataObjects\WorkflowInstance:
   WorkflowInstance01:
@@ -193,3 +204,10 @@ Symbiote\AdvancedWorkflow\DataObjects\WorkflowInstance:
     WorkflowStatus: Paused
     Actions: =>Symbiote\AdvancedWorkflow\DataObjects\WorkflowActionInstance.ActionInstance16
     CurrentAction: =>Symbiote\AdvancedWorkflow\DataObjects\WorkflowActionInstance.ActionInstance16
+  WorkflowInstance07:
+    Title: 'Test WorkflowInstance 07'
+    WorkflowStatus: Active
+    TargetClass: 'SilverStripe\CMS\Model\SiteTree'
+    Actions: =>Symbiote\AdvancedWorkflow\DataObjects\WorkflowActionInstance.ActionInstance17
+    CurrentAction: =>Symbiote\AdvancedWorkflow\DataObjects\WorkflowActionInstance.ActionInstance17
+    Users: =>SilverStripe\Security\Member.Transition06Member

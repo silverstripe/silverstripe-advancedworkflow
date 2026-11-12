@@ -589,7 +589,7 @@ class WorkflowInstance extends DataObject
             || $member->inGroups($this->Groups());
         // This method is used in more than just the ModelAdmin. Check for the current controller to determine where
         // canView() expectations differ
-        if ($this->getTarget() && Controller::curr()->getAction() == 'index' && !$inWorkflowGroupOrUserTables) {
+        if ($this->getTarget() && Controller::curr()?->getAction() == 'index' && !$inWorkflowGroupOrUserTables) {
             if ($this->getVersionedConnection($this->getTarget()->ID, $member->ID)) {
                 return true;
             }

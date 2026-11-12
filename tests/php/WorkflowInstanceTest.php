@@ -2,6 +2,8 @@
 
 namespace Symbiote\AdvancedWorkflow\Tests;
 
+use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Control\Controller;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Security;
@@ -156,5 +158,44 @@ class WorkflowInstanceTest extends SapphireTest
         $transitions = $instance->validTransitions()->column('ID');
         $this->assertNotContains($transition1->ID, $transitions);
         $this->assertContains($transition2->ID, $transitions);
+    }
+
+    /**
+     * Check that an assigned member can edit a page in workflow when there is no current controller, as in a task
+     * running as that member
+     */
+    public function testCanEditTargetWithoutController(): void
+    {
+        $instance = $this->objFromFixture(WorkflowInstance::class, 'WorkflowInstance07');
+        $target = $this->objFromFixture(SiteTree::class, 'WorkflowTarget01');
+        $member = $this->objFromFixture(Member::class, 'Transition06Member');
+        $instance->TargetID = $target->ID;
+        $instance->write();
+
+        $canEdit = false;
+        $this->withoutController(function () use ($target, $member, &$canEdit) {
+            $canEdit = Member::actAs($member, fn () => $target->canEdit());
+        });
+
+        $this->assertTrue($canEdit);
+    }
+
+    /**
+     * Run a callback with the controller stack empty, then restore it
+     */
+    private function withoutController(callable $callback): void
+    {
+        $controllers = [];
+        while ($controller = Controller::curr()) {
+            $controller->popCurrent();
+            $controllers[] = $controller;
+        }
+        try {
+            $callback();
+        } finally {
+            foreach (array_reverse($controllers) as $controller) {
+                $controller->pushCurrent();
+            }
+        }
     }
 }
