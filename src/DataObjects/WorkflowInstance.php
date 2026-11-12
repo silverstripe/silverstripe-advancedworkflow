@@ -60,6 +60,13 @@ class WorkflowInstance extends DataObject
         'TargetID'          => 'Int',
     );
 
+    private static $indexes = [
+        'Target' => [
+            'type' => 'index',
+            'columns' => ['TargetID', 'TargetClass'],
+        ],
+    ];
+
     private static $has_one = array(
         'Definition'    => WorkflowDefinition::class,
         'CurrentAction' => WorkflowActionInstance::class,
