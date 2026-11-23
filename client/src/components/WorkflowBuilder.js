@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useId } from 'react';
+import i18n from 'i18n';
 import Icon from './Icon';
 import FieldLabel from './FieldLabel';
 import MultiSelect from './MultiSelect';
@@ -13,7 +14,7 @@ import {
   removeStage as removeStageOp,
   setSupportEnabled,
 } from '../lib/workflowStages';
-import { CONFIG_FIELDS, TRANSITION_TYPES, metaFor } from '../lib/stepMeta';
+import { configFieldsFor, transitionTypes, metaFor } from '../lib/stepMeta';
 import onActivateKey from '../lib/keyboard';
 import { ENDPOINT, getJson, postJson } from '../lib/api';
 import { LOAD_FAILURE, classifyLoadFailure } from '../lib/workflowResponse';
@@ -27,11 +28,17 @@ export const LOAD_STATE = Object.freeze({
   FAILED: 'failed',
 });
 
-const LOAD_FAILURE_MESSAGE = Object.freeze({
-  [LOAD_FAILURE.FORBIDDEN]: 'You do not have permission to edit this workflow.',
-  [LOAD_FAILURE.UNAVAILABLE]: 'The workflow could not be loaded.',
-  [LOAD_FAILURE.NETWORK]: 'The workflow could not be loaded. Check your connection and try again.',
-});
+const loadFailureMessage = (failure) => ({
+  [LOAD_FAILURE.FORBIDDEN]: i18n._t(
+    'WorkflowBuilder.LOAD_FORBIDDEN',
+    'You do not have permission to edit this workflow.'
+  ),
+  [LOAD_FAILURE.UNAVAILABLE]: i18n._t('WorkflowBuilder.LOAD_UNAVAILABLE', 'The workflow could not be loaded.'),
+  [LOAD_FAILURE.NETWORK]: i18n._t(
+    'WorkflowBuilder.LOAD_NETWORK',
+    'The workflow could not be loaded. Check your connection and try again.'
+  ),
+}[failure]);
 
 // Advanced standalone steps offered in the "Other steps" area — these
 // sit outside the stage model and are wired manually.
@@ -76,7 +83,7 @@ export default function WorkflowBuilder({ definitionId }) {
     getJson(ENDPOINT.LOAD_DEFINITION, { ID: definitionId })
       .then(({ ok, status, data }) => {
         if (!ok || !data || data.error) {
-          setLoadError(LOAD_FAILURE_MESSAGE[classifyLoadFailure(status)]);
+          setLoadError(loadFailureMessage(classifyLoadFailure(status)));
           setLoadState(LOAD_STATE.FAILED);
           return;
         }
@@ -85,7 +92,7 @@ export default function WorkflowBuilder({ definitionId }) {
         setLoadState(LOAD_STATE.READY);
       })
       .catch(() => {
-        setLoadError(LOAD_FAILURE_MESSAGE[classifyLoadFailure(null)]);
+        setLoadError(loadFailureMessage(classifyLoadFailure(null)));
         setLoadState(LOAD_STATE.FAILED);
       });
   }, [definitionId]);
@@ -181,17 +188,17 @@ export default function WorkflowBuilder({ definitionId }) {
       });
 
       if (!response.ok) throw new Error('Save failed');
-      setSaveMessage({ ok: true, text: 'Saved' });
+      setSaveMessage({ ok: true, text: i18n._t('WorkflowBuilder.SAVED', 'Saved') });
       setTimeout(() => setSaveMessage(null), 3000);
     } catch {
-      setSaveMessage({ ok: false, text: 'Failed to save' });
+      setSaveMessage({ ok: false, text: i18n._t('WorkflowBuilder.SAVE_FAILED', 'Failed to save') });
     } finally {
       setIsSaving(false);
     }
   };
 
   const selectedStep = steps.find((s) => s.id === selectedId);
-  const selectedConfig = selectedStep ? CONFIG_FIELDS[selectedStep.type] : null;
+  const selectedConfig = selectedStep ? configFieldsFor(selectedStep.type) : null;
   const selectedIsManaged = selectedStep ? managedIds.has(selectedStep.id) : false;
 
   // ---- Right-panel config editors (shared with raw steps) ----
@@ -205,7 +212,7 @@ export default function WorkflowBuilder({ definitionId }) {
           onChange={onChange}
           onSearch={searchUsers}
           labels={userLabels}
-          placeholder="Search users…"
+          placeholder={i18n._t('WorkflowBuilder.SEARCH_USERS', 'Search users…')}
         />
       );
     }
@@ -216,7 +223,7 @@ export default function WorkflowBuilder({ definitionId }) {
         options={meta.groups || {}}
         value={selectedIds}
         onChange={onChange}
-        placeholder="Search groups…"
+        placeholder={i18n._t('WorkflowBuilder.SEARCH_GROUPS', 'Search groups…')}
       />
     );
   };
@@ -346,20 +353,22 @@ export default function WorkflowBuilder({ definitionId }) {
 
     return (
       <details className="wf-builder__transition-advanced">
-        <summary>Advanced: type &amp; permissions</summary>
+        <summary>{i18n._t('WorkflowBuilder.TRANSITION_ADVANCED', 'Advanced: type & permissions')}</summary>
         <div className="wf-builder__edit-row">
-          <FieldLabel htmlFor={fieldId(role, 'type')}>Transition type</FieldLabel>
+          <FieldLabel htmlFor={fieldId(role, 'type')}>{i18n._t('WorkflowBuilder.TRANSITION_TYPE', 'Transition type')}</FieldLabel>
           <select
             id={fieldId(role, 'type')}
             value={transition.transitionType || 'Active'}
             onChange={(e) => patchTransition(step, role, { transitionType: e.target.value })}
           >
-            {TRANSITION_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+            {transitionTypes().map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
         </div>
         <div className="wf-builder__edit-row">
-          <FieldLabel htmlFor={fieldId(role, 'groups')}>Restrict to groups</FieldLabel>
-          <p className="wf-builder__field-help">Leave empty to allow anyone assigned to the step.</p>
+          <FieldLabel htmlFor={fieldId(role, 'groups')}>{i18n._t('WorkflowBuilder.RESTRICT_GROUPS', 'Restrict to groups')}</FieldLabel>
+          <p className="wf-builder__field-help">
+            {i18n._t('WorkflowBuilder.RESTRICT_GROUPS_HELP', 'Leave empty to allow anyone assigned to the step.')}
+          </p>
           {renderMultiSelect(
             'groups',
             transition.groupIds,
@@ -368,7 +377,7 @@ export default function WorkflowBuilder({ definitionId }) {
           )}
         </div>
         <div className="wf-builder__edit-row">
-          <FieldLabel htmlFor={fieldId(role, 'users')}>Restrict to users</FieldLabel>
+          <FieldLabel htmlFor={fieldId(role, 'users')}>{i18n._t('WorkflowBuilder.RESTRICT_USERS', 'Restrict to users')}</FieldLabel>
           {renderMultiSelect(
             'users',
             transition.userIds,
@@ -397,19 +406,38 @@ export default function WorkflowBuilder({ definitionId }) {
 
   const renderRawTransitions = (step) => {
     if (step.type === STEP_TYPES.CANCEL) {
-      return <p className="wf-builder__field-help">This step ends the workflow as rejected.</p>;
+      return (
+        <p className="wf-builder__field-help">
+          {i18n._t('WorkflowBuilder.CANCEL_ENDS_WORKFLOW', 'This step ends the workflow as rejected.')}
+        </p>
+      );
     }
 
     if (step.type === STEP_TYPES.APPROVAL) {
       return (
         <>
-          {renderTransitionRow(step, 'approve', <><Icon name="check" /> If approved, go to:</>, 'Next step in order')}
-          {renderTransitionRow(step, 'reject', <><Icon name="cross" /> If rejected, go to:</>, 'End workflow (reject)')}
+          {renderTransitionRow(
+            step,
+            'approve',
+            <><Icon name="check" /> {i18n._t('WorkflowBuilder.IF_APPROVED_GO_TO', 'If approved, go to:')}</>,
+            i18n._t('WorkflowBuilder.NEXT_STEP_IN_ORDER', 'Next step in order')
+          )}
+          {renderTransitionRow(
+            step,
+            'reject',
+            <><Icon name="cross" /> {i18n._t('WorkflowBuilder.IF_REJECTED_GO_TO', 'If rejected, go to:')}</>,
+            i18n._t('WorkflowBuilder.END_WORKFLOW_REJECT', 'End workflow (reject)')
+          )}
         </>
       );
     }
 
-    return renderTransitionRow(step, 'next', <><Icon name="arrow-down" /> Then go to:</>, 'End workflow');
+    return renderTransitionRow(
+      step,
+      'next',
+      <><Icon name="arrow-down" /> {i18n._t('WorkflowBuilder.THEN_GO_TO', 'Then go to:')}</>,
+      i18n._t('WorkflowBuilder.END_WORKFLOW', 'End workflow')
+    );
   };
 
   // ---- Left column pieces ----
@@ -421,7 +449,7 @@ export default function WorkflowBuilder({ definitionId }) {
         className="wf-builder__insert-btn"
         onClick={() => insertReviewBetween(afterStageId, beforeStageId)}
       >
-        <Icon name="plus" /> Insert a review stage here
+        <Icon name="plus" /> {i18n._t('WorkflowBuilder.INSERT_STAGE', 'Insert a review stage here')}
       </button>
     </div>
   );
@@ -476,12 +504,15 @@ export default function WorkflowBuilder({ definitionId }) {
     <div className="wf-builder">
       <div className="wf-builder__header">
         <div>
-          <span className="wf-builder__heading">Visual Workflow Builder</span>
+          <span className="wf-builder__heading">{i18n._t('WorkflowBuilder.HEADING', 'Visual Workflow Builder')}</span>
           <p className="wf-builder__intro">
-            A workflow is a series of <strong>review stages</strong>. Each stage assigns reviewers,
-            notifies them, then <strong>waits for them to approve or reject</strong>. Approved content
-            moves to the next stage; rejected content follows the rejection path. Add a stage to begin —
-            the standard steps are created for you.
+            {i18n._t(
+              'WorkflowBuilder.INTRO',
+              'A workflow is a series of review stages. Each stage assigns reviewers, notifies them, '
+                + 'then waits for them to approve or reject. Approved content moves to the next stage; '
+                + 'rejected content follows the rejection path. Add a stage to begin — the standard steps '
+                + 'are created for you.'
+            )}
           </p>
         </div>
         <div className="wf-builder__actions">
@@ -496,14 +527,16 @@ export default function WorkflowBuilder({ definitionId }) {
             disabled={isSaving || loadState !== LOAD_STATE.READY}
             type="button"
           >
-            {isSaving ? 'Saving…' : 'Save Workflow'}
+            {isSaving
+              ? i18n._t('WorkflowBuilder.SAVING', 'Saving…')
+              : i18n._t('WorkflowBuilder.SAVE', 'Save Workflow')}
           </button>
         </div>
       </div>
 
       {loadState === LOAD_STATE.LOADING && (
         <div className="wf-builder__status" role="status" aria-live="polite">
-          Loading workflow…
+          {i18n._t('WorkflowBuilder.LOADING', 'Loading workflow…')}
         </div>
       )}
 
@@ -511,7 +544,7 @@ export default function WorkflowBuilder({ definitionId }) {
         <div className="wf-builder__status wf-builder__status--error" role="alert">
           <span>{loadError}</span>
           <button type="button" className="wf-builder__btn" onClick={loadDefinition}>
-            Try again
+            {i18n._t('WorkflowBuilder.TRY_AGAIN', 'Try again')}
           </button>
         </div>
       )}
@@ -521,14 +554,17 @@ export default function WorkflowBuilder({ definitionId }) {
           <div className="wf-builder__flow">
             {!hasAnything && (
               <div className="wf-builder__flow-empty">
-                <p className="wf-builder__empty-title">No stages yet</p>
+                <p className="wf-builder__empty-title">{i18n._t('WorkflowBuilder.NO_STAGES', 'No stages yet')}</p>
                 <p className="wf-builder__empty-desc">
-                  Start by adding a review stage. We&apos;ll create the standard steps —
-                  assign reviewers, notify them, and wait for approval — and a rejection path,
-                  all wired together. You can fine-tune each step afterwards.
+                  {i18n._t(
+                    'WorkflowBuilder.NO_STAGES_HELP',
+                    'Start by adding a review stage. We\'ll create the standard steps — assign reviewers, '
+                      + 'notify them, and wait for approval — and a rejection path, all wired together. '
+                      + 'You can fine-tune each step afterwards.'
+                  )}
                 </p>
                 <button type="button" className="wf-builder__btn wf-builder__btn--primary" onClick={addReviewStageAtEnd}>
-                  <Icon name="plus" /> Add your first review stage
+                  <Icon name="plus" /> {i18n._t('WorkflowBuilder.ADD_FIRST_STAGE', 'Add your first review stage')}
                 </button>
               </div>
             )}
@@ -538,11 +574,11 @@ export default function WorkflowBuilder({ definitionId }) {
             {hasAnything && (
               <div className="wf-builder__flow-actions">
                 <button type="button" className="wf-builder__btn wf-builder__btn--primary" onClick={addReviewStageAtEnd}>
-                  <Icon name="plus" /> Add a review stage
+                  <Icon name="plus" /> {i18n._t('WorkflowBuilder.ADD_STAGE', 'Add a review stage')}
                 </button>
                 {!hasPublishStage && (
                   <button type="button" className="wf-builder__btn" onClick={addPublishStage}>
-                    <Icon name="publish" /> Add “publish when approved”
+                    <Icon name="publish" /> {i18n._t('WorkflowBuilder.ADD_PUBLISH_STAGE', 'Add “publish when approved”')}
                   </button>
                 )}
               </div>
@@ -550,10 +586,13 @@ export default function WorkflowBuilder({ definitionId }) {
 
             {model.approvedOutcome.length > 0 && (
               <div className="wf-builder__section wf-builder__section--approved">
-                <div className="wf-builder__section-label">When approved</div>
+                <div className="wf-builder__section-label">{i18n._t('WorkflowBuilder.WHEN_APPROVED', 'When approved')}</div>
                 <p className="wf-builder__section-help">
-                  These steps run after the final approval — for example, letting the author know
-                  their content passed. Click one to edit it.
+                  {i18n._t(
+                    'WorkflowBuilder.WHEN_APPROVED_HELP',
+                    'These steps run after the final approval — for example, letting the author know '
+                      + 'their content passed. Click one to edit it.'
+                  )}
                 </p>
                 {model.approvedOutcome.map(renderRawStepRow)}
               </div>
@@ -561,10 +600,13 @@ export default function WorkflowBuilder({ definitionId }) {
 
             {model.rejection.length > 0 && (
               <div className="wf-builder__section wf-builder__section--reject">
-                <div className="wf-builder__section-label">Rejection path</div>
+                <div className="wf-builder__section-label">{i18n._t('WorkflowBuilder.REJECTION_PATH', 'Rejection path')}</div>
                 <p className="wf-builder__section-help">
-                  These steps run only when a reviewer rejects the content. Every stage&apos;s
-                  “reject” outcome leads here.
+                  {i18n._t(
+                    'WorkflowBuilder.REJECTION_PATH_HELP',
+                    'These steps run only when a reviewer rejects the content. Every stage\'s '
+                      + '“reject” outcome leads here.'
+                  )}
                 </p>
                 {model.rejection.map(renderRawStepRow)}
               </div>
@@ -572,10 +614,13 @@ export default function WorkflowBuilder({ definitionId }) {
 
             {model.otherSteps.length > 0 && (
               <div className="wf-builder__section wf-builder__section--other">
-                <div className="wf-builder__section-label">Other steps</div>
+                <div className="wf-builder__section-label">{i18n._t('WorkflowBuilder.OTHER_STEPS', 'Other steps')}</div>
                 <p className="wf-builder__section-help">
-                  Steps that aren&apos;t part of a standard review stage. Click one to edit it and
-                  set where it leads.
+                  {i18n._t(
+                    'WorkflowBuilder.OTHER_STEPS_HELP',
+                    'Steps that aren\'t part of a standard review stage. Click one to edit it and '
+                      + 'set where it leads.'
+                  )}
                 </p>
                 {model.otherSteps.map(renderRawStepRow)}
               </div>
@@ -583,7 +628,7 @@ export default function WorkflowBuilder({ definitionId }) {
 
             {hasAnything && (
               <details className="wf-builder__advanced-add">
-                <summary>Add an advanced step</summary>
+                <summary>{i18n._t('WorkflowBuilder.ADD_ADVANCED_STEP', 'Add an advanced step')}</summary>
                 {ADVANCED_STEP_TYPES.map((type) => {
                   const stepMeta = metaFor(type);
                   return (
@@ -615,7 +660,7 @@ export default function WorkflowBuilder({ definitionId }) {
                 <p className="wf-builder__edit-desc">{metaFor(selectedStep.type).description}</p>
 
                 <div className="wf-builder__edit-row">
-                  <FieldLabel htmlFor={fieldId('title')}>Step name</FieldLabel>
+                  <FieldLabel htmlFor={fieldId('title')}>{i18n._t('WorkflowBuilder.STEP_NAME', 'Step name')}</FieldLabel>
                   <input
                     id={fieldId('title')}
                     value={selectedStep.title}
@@ -642,14 +687,17 @@ export default function WorkflowBuilder({ definitionId }) {
                   <>
                     <div className="wf-builder__edit-divider" />
                     <p className="wf-builder__field-help">
-                      <Icon name="circle" /> This step is part of a review stage — the builder wires it up
-                      automatically. Use the stage card on the left to add, remove or reorder its steps.
+                      <Icon name="circle" /> {i18n._t(
+                        'WorkflowBuilder.MANAGED_STEP_HELP',
+                        'This step is part of a review stage — the builder wires it up automatically. '
+                          + 'Use the stage card on the left to add or remove its steps.'
+                      )}
                     </p>
                   </>
                 ) : (
                   <>
                     <div className="wf-builder__edit-divider" />
-                    <p className="wf-builder__edit-label">What happens after this step?</p>
+                    <p className="wf-builder__edit-label">{i18n._t('WorkflowBuilder.AFTER_THIS_STEP', 'What happens after this step?')}</p>
                     {renderRawTransitions(selectedStep)}
 
                     <div className="wf-builder__edit-divider" />
@@ -658,18 +706,25 @@ export default function WorkflowBuilder({ definitionId }) {
                       onClick={() => removeRawStep(selectedStep.id)}
                       type="button"
                     >
-                      Remove this step
+                      {i18n._t('WorkflowBuilder.REMOVE_STEP', 'Remove this step')}
                     </button>
                   </>
                 )}
               </div>
             ) : (
               <div className="wf-builder__content-empty">
-                <p className="wf-builder__empty-title">{hasAnything ? 'Select a step' : 'No steps yet'}</p>
+                <p className="wf-builder__empty-title">
+                  {hasAnything
+                    ? i18n._t('WorkflowBuilder.SELECT_STEP', 'Select a step')
+                    : i18n._t('WorkflowBuilder.NO_STEPS', 'No steps yet')}
+                </p>
                 <p className="wf-builder__empty-desc">
                   {hasAnything
-                    ? 'Click a step in a stage on the left to configure who reviews, what the email says, and more.'
-                    : 'Add your first review stage on the left to get started.'}
+                    ? i18n._t(
+                      'WorkflowBuilder.SELECT_STEP_HELP',
+                      'Click a step in a stage on the left to configure who reviews, what the email says, and more.'
+                    )
+                    : i18n._t('WorkflowBuilder.NO_STEPS_HELP', 'Add your first review stage on the left to get started.')}
                 </p>
               </div>
             )}

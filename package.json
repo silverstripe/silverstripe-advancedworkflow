@@ -49,7 +49,9 @@
       "<rootDir>/client/tests"
     ],
     "moduleNameMapper": {
-      "^lib/Config$": "<rootDir>/client/tests/mocks/Config.js"
+      "^lib/Config$": "<rootDir>/client/tests/mocks/Config.js",
+      "^i18n$": "<rootDir>/client/tests/mocks/i18n.js",
+      "^jquery$": "<rootDir>/client/tests/mocks/jquery.js"
     }
   }
 }

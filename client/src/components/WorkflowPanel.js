@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import i18n from 'i18n';
 import WorkflowStatusBar from './WorkflowStatusBar';
 import WorkflowDetailPanel from './WorkflowDetailPanel';
 import Icon from './Icon';
@@ -62,7 +63,7 @@ const WorkflowPanel = ({ recordID, className }) => {
   if (error) {
     return (
       <div className="workflow-panel workflow-panel--error" role="alert">
-        <span>Unable to load workflow status.</span>
+        <span>{i18n._t('WorkflowPanel.LOAD_ERROR', 'Unable to load workflow status.')}</span>
       </div>
     );
   }
@@ -81,7 +82,7 @@ const WorkflowPanel = ({ recordID, className }) => {
           <div className="workflow-bar__top">
             <div className="workflow-bar__left">
               <span className="workflow-bar__indicator workflow-bar__indicator--info" aria-hidden="true"><Icon name="circle" /></span>
-              <span className="workflow-bar__status">No active workflow</span>
+              <span className="workflow-bar__status">{i18n._t('WorkflowPanel.NO_ACTIVE_WORKFLOW', 'No active workflow')}</span>
             </div>
             <div className="workflow-bar__right">
               {availableWorkflows.map((wf) => (

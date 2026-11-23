@@ -2,6 +2,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import StageCard from '../src/components/StageCard';
 import WorkflowBuilder from '../src/components/WorkflowBuilder';
+import WorkflowStatusBar from '../src/components/WorkflowStatusBar';
 import { buildStages, STEP_TYPES } from '../src/lib/workflowStages';
 
 // A smoke render catches JSX / prop / import errors that a webpack
@@ -44,5 +45,24 @@ describe('component smoke rendering', () => {
     expect(html).toContain('Loading workflow');
     expect(html).not.toContain('No stages yet');
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Save Workflow/);
+  });
+
+  it('labels a waiting workflow as awaiting approval', () => {
+    const html = renderToString(<WorkflowStatusBar data={{ instanceId: 1, workflowStatus: 'Paused', steps: [] }} />);
+    expect(html).toContain('Awaiting approval');
+    expect(html).not.toContain('Paused');
+  });
+
+  it('reads the published state from the flag, not the translated label', () => {
+    const html = renderToString(
+      <WorkflowStatusBar data={{ instanceId: 1, workflowStatus: 'Complete', isPublished: true, current: 'Publié', steps: [] }} />
+    );
+    expect(html).toContain('workflow-bar--published');
+  });
+
+  it('hides View Details from users who cannot view the workflow', () => {
+    const data = { instanceId: 1, workflowStatus: 'Paused', steps: [] };
+    expect(renderToString(<WorkflowStatusBar data={data} />)).not.toContain('View Details');
+    expect(renderToString(<WorkflowStatusBar data={{ ...data, canViewDetails: true }} />)).toContain('View Details');
   });
 });

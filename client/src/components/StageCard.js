@@ -1,4 +1,5 @@
 import React from 'react';
+import i18n from 'i18n';
 import Icon from './Icon';
 import onActivateKey from '../lib/keyboard';
 import { STEP_TYPES, STAGE_KIND } from '../lib/workflowStages';
@@ -50,15 +51,18 @@ export default function StageCard({
           <span className="wf-builder__substep-role">{meta.role}</span>
         </div>
         {isGate && (
-          <span className="wf-builder__gate-badge" title="The workflow waits here until someone approves or rejects">
-            <Icon name="pause" /> Waits for a decision
+          <span
+            className="wf-builder__gate-badge"
+            title={i18n._t('WorkflowBuilder.GATE_HINT', 'The workflow waits here until someone approves or rejects')}
+          >
+            <Icon name="pause" /> {i18n._t('WorkflowBuilder.GATE_BADGE', 'Waits for a decision')}
           </span>
         )}
         {removable && (
           <button
             type="button"
             className="wf-builder__substep-remove"
-            title="Remove this step from the stage"
+            title={i18n._t('WorkflowBuilder.REMOVE_STEP_FROM_STAGE', 'Remove this step from the stage')}
             onClick={(e) => { e.stopPropagation(); onRemoveSupport(stage.id, step.type); }}
           >
             <Icon name="cross" />
@@ -79,7 +83,7 @@ export default function StageCard({
 
     return (
       <div className="wf-builder__stage-addons">
-        <span className="wf-builder__addons-label">Add to this stage:</span>
+        <span className="wf-builder__addons-label">{i18n._t('WorkflowBuilder.ADD_TO_STAGE', 'Add to this stage:')}</span>
         {missingSupport.map((type) => {
           const meta = metaFor(type);
           return (
@@ -98,16 +102,22 @@ export default function StageCard({
     );
   };
 
-  const renderBranches = () => (
-    <div className="wf-builder__stage-branches">
-      <span className="wf-builder__branch wf-builder__branch--approve">
-        <Icon name="check" /> If approved → <strong>{targetLabel(stage.approveTargetId, stepTitle, 'End of workflow')}</strong>
-      </span>
-      <span className="wf-builder__branch wf-builder__branch--reject">
-        <Icon name="cross" /> If rejected → <strong>{targetLabel(stage.rejectTargetId, stepTitle, 'End of workflow')}</strong>
-      </span>
-    </div>
-  );
+  const renderBranches = () => {
+    const endOfWorkflow = i18n._t('WorkflowBuilder.END_OF_WORKFLOW', 'End of workflow');
+
+    return (
+      <div className="wf-builder__stage-branches">
+        <span className="wf-builder__branch wf-builder__branch--approve">
+          <Icon name="check" /> {i18n._t('WorkflowBuilder.IF_APPROVED', 'If approved →')}
+          {' '}<strong>{targetLabel(stage.approveTargetId, stepTitle, endOfWorkflow)}</strong>
+        </span>
+        <span className="wf-builder__branch wf-builder__branch--reject">
+          <Icon name="cross" /> {i18n._t('WorkflowBuilder.IF_REJECTED', 'If rejected →')}
+          {' '}<strong>{targetLabel(stage.rejectTargetId, stepTitle, endOfWorkflow)}</strong>
+        </span>
+      </div>
+    );
+  };
 
   return (
     <div className={`wf-builder__stage ${isPublish ? 'wf-builder__stage--publish' : 'wf-builder__stage--review'}`}>
@@ -115,18 +125,23 @@ export default function StageCard({
         <span className="wf-builder__stage-num">{number}</span>
         <div className="wf-builder__stage-heading">
           <span className="wf-builder__stage-title">
-            {isPublish ? 'Publish when approved' : `Stage ${number}: Review`}
+            {isPublish
+              ? i18n._t('WorkflowBuilder.PUBLISH_STAGE_TITLE', 'Publish when approved')
+              : i18n.inject(i18n._t('WorkflowBuilder.REVIEW_STAGE_TITLE', 'Stage {number}: Review'), { number })}
           </span>
           <span className="wf-builder__stage-sub">
             {isPublish
-              ? 'The content goes live once the workflow reaches this point.'
-              : 'Reviewers are assigned and notified, then must approve or reject.'}
+              ? i18n._t('WorkflowBuilder.PUBLISH_STAGE_DESCRIPTION', 'The content goes live once the workflow reaches this point.')
+              : i18n._t(
+                'WorkflowBuilder.REVIEW_STAGE_DESCRIPTION',
+                'Reviewers are assigned and notified, then must approve or reject.'
+              )}
           </span>
         </div>
         <button
           type="button"
           className="wf-builder__stage-remove"
-          title="Remove this whole stage"
+          title={i18n._t('WorkflowBuilder.REMOVE_STAGE', 'Remove this whole stage')}
           onClick={() => onRemoveStage(stage.id)}
         >
           <Icon name="trash" />

@@ -27,6 +27,10 @@ class WorkflowDefinitionBuilderExtension extends Extension
             $owner->ID
         );
 
+        $fields->findOrMakeTab(
+            'Root.VisualBuilder',
+            _t(__CLASS__ . '.TAB_TITLE', 'Visual builder')
+        );
         $fields->addFieldToTab(
             'Root.VisualBuilder',
             LiteralField::create('WorkflowBuilderPanel', $html)

@@ -74,11 +74,11 @@ class WorkflowStatusService
 
         $currentTitle = null;
         if ($isRejected) {
-            $currentTitle = 'Rejected';
+            $currentTitle = _t(__CLASS__ . '.REJECTED', 'Rejected');
         } elseif ($isFinished && $isPublished) {
-            $currentTitle = 'Published';
+            $currentTitle = _t(__CLASS__ . '.PUBLISHED', 'Published');
         } elseif ($isFinished && !$isRejected) {
-            $currentTitle = 'Approved — Ready to publish';
+            $currentTitle = _t(__CLASS__ . '.READY_TO_PUBLISH', 'Approved — Ready to publish');
         } elseif ($currentAction instanceof WorkflowActionInstance && $currentAction->exists()) {
             $currentTitle = $this->getPhaseLabel($currentAction);
         }
@@ -117,6 +117,7 @@ class WorkflowStatusService
             'instanceId' => $instance->ID,
             'workflowStatus' => $instance->WorkflowStatus,
             'isRejected' => $isRejected,
+            'isPublished' => $isPublished,
             'current' => $currentTitle,
             'canViewDetails' => $canViewDetails,
             'assignedTo' => $canViewDetails ? $this->getAssignedUserName($instance) : null,
@@ -375,7 +376,7 @@ class WorkflowStatusService
         // Phase 1: Submitted (always present — completed once workflow starts)
         $phases[] = [
             'id' => 'submitted',
-            'title' => 'Submitted',
+            'title' => _t(__CLASS__ . '.SUBMITTED', 'Submitted'),
             'status' => 'completed',
         ];
 
@@ -403,10 +404,10 @@ class WorkflowStatusService
 
         // Final phase: Approved (ready to publish) or Rejected
         $finalStatus = 'pending';
-        $finalTitle = 'Approved';
+        $finalTitle = _t(__CLASS__ . '.APPROVED', 'Approved');
         if ($isRejected) {
             $finalStatus = 'rejected';
-            $finalTitle = 'Rejected';
+            $finalTitle = _t(__CLASS__ . '.REJECTED', 'Rejected');
         } elseif ($isFinished && !$isRejected) {
             $finalStatus = 'completed';
         }

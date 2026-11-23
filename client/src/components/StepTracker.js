@@ -1,12 +1,13 @@
 import React from 'react';
+import i18n from 'i18n';
 import Icon from './Icon';
 
-const STATUS_LABELS = Object.freeze({
-  completed: 'Completed',
-  active: 'Current step',
-  pending: 'Pending',
-  rejected: 'Rejected',
-});
+const statusLabel = (status) => ({
+  completed: i18n._t('WorkflowPanel.STEP_COMPLETED', 'Completed'),
+  active: i18n._t('WorkflowPanel.STEP_CURRENT', 'Current step'),
+  pending: i18n._t('WorkflowPanel.STEP_PENDING', 'Pending'),
+  rejected: i18n._t('WorkflowPanel.STEP_REJECTED', 'Rejected'),
+}[status] || status);
 
 const renderDotMark = (status) => {
   if (status === 'completed') return <Icon name="check" />;
@@ -43,7 +44,7 @@ const StepTracker = ({ steps, currentIndex, compact, isRejected }) => {
       >
         {steps.map((step, i) => {
           const status = getStepStatus(step, i, currentIndex, isRejected);
-          const tooltipText = `${step.title} — ${STATUS_LABELS[status] || status}`;
+          const tooltipText = `${step.title} — ${statusLabel(status)}`;
 
           return (
             <React.Fragment key={step.id}>
@@ -67,7 +68,10 @@ const StepTracker = ({ steps, currentIndex, compact, isRejected }) => {
           );
         })}
         <span className="workflow-tracker__count">
-          Step {currentIndex + 1} of {steps.length}
+          {i18n.inject(
+            i18n._t('WorkflowPanel.STEP_COUNT', 'Step {current} of {total}'),
+            { current: currentIndex + 1, total: steps.length }
+          )}
         </span>
       </div>
     );
@@ -84,7 +88,7 @@ const StepTracker = ({ steps, currentIndex, compact, isRejected }) => {
     >
       {steps.map((step, i) => {
         const status = getStepStatus(step, i, currentIndex, isRejected);
-        const tooltipText = `${step.title} — ${STATUS_LABELS[status] || status}`;
+        const tooltipText = `${step.title} — ${statusLabel(status)}`;
 
         return (
           <React.Fragment key={step.id}>

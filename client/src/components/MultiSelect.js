@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useId } from 'react';
+import i18n from 'i18n';
 import Icon from './Icon';
 
 /**
@@ -19,7 +20,7 @@ import Icon from './Icon';
  *
  * Pass `inputId` so an external <FieldLabel htmlFor> can label the search box.
  */
-export default function MultiSelect({ options, value, onChange, placeholder = 'Search…', onSearch, labels, inputId }) {
+export default function MultiSelect({ options, value, onChange, placeholder, onSearch, labels, inputId }) {
   const isAsync = typeof onSearch === 'function';
   const selected = (value || []).map(String);
   const [query, setQuery] = useState('');
@@ -75,7 +76,9 @@ export default function MultiSelect({ options, value, onChange, placeholder = 'S
   }, [query, open, isAsync, onSearch]);
 
   if (!isAsync && Object.keys(options || {}).length === 0) {
-    return <p className="wf-builder__field-help">No options available.</p>;
+    return (
+      <p className="wf-builder__field-help">{i18n._t('WorkflowBuilder.NO_OPTIONS', 'No options available.')}</p>
+    );
   }
 
   const labelFor = (id) => {
@@ -101,7 +104,7 @@ export default function MultiSelect({ options, value, onChange, placeholder = 'S
   return (
     <div className={`wf-ms ${open ? 'wf-ms--open' : ''}`} ref={ref}>
       <div className="wf-ms__control" onClick={() => setOpen(true)} role="presentation">
-        {selected.length === 0 && !query && <span className="wf-ms__placeholder">None selected</span>}
+        {selected.length === 0 && !query && <span className="wf-ms__placeholder">{i18n._t('WorkflowBuilder.NONE_SELECTED', 'None selected')}</span>}
         {selected.map((id) => (
           <span className="wf-ms__chip" key={id}>
             {labelFor(id)}
@@ -109,7 +112,7 @@ export default function MultiSelect({ options, value, onChange, placeholder = 'S
               type="button"
               className="wf-ms__chip-remove"
               onClick={(e) => { e.stopPropagation(); remove(id); }}
-              aria-label={`Remove ${labelFor(id)}`}
+              aria-label={i18n.inject(i18n._t('WorkflowBuilder.REMOVE_OPTION', 'Remove {label}'), { label: labelFor(id) })}
             >
               <Icon name="cross" />
             </button>
@@ -122,16 +125,20 @@ export default function MultiSelect({ options, value, onChange, placeholder = 'S
           value={query}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
-          placeholder={selected.length === 0 ? placeholder : 'Add more…'}
+          placeholder={selected.length === 0
+            ? (placeholder || i18n._t('WorkflowBuilder.SEARCH', 'Search…'))
+            : i18n._t('WorkflowBuilder.ADD_MORE', 'Add more…')}
         />
       </div>
 
       {open && (
         <div className="wf-ms__menu">
-          {loading && <div className="wf-ms__empty">Searching…</div>}
+          {loading && <div className="wf-ms__empty">{i18n._t('WorkflowBuilder.SEARCHING', 'Searching…')}</div>}
           {!loading && menuOptions.length === 0 && (
             <div className="wf-ms__empty">
-              {isAsync && q === '' ? 'Type to search' : 'No matches'}
+              {isAsync && q === ''
+                ? i18n._t('WorkflowBuilder.TYPE_TO_SEARCH', 'Type to search')
+                : i18n._t('WorkflowBuilder.NO_MATCHES', 'No matches')}
             </div>
           )}
           {!loading && menuOptions.map(([id, name]) => (

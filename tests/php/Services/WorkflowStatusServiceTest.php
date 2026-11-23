@@ -53,6 +53,19 @@ class WorkflowStatusServiceTest extends SapphireTest
         $this->assertArrayHasKey('instanceId', $result);
     }
 
+    /**
+     * The panel reads these flags rather than comparing translated labels.
+     */
+    public function testGetStatusForTargetFlagsAnActiveWorkflowAsNeitherPublishedNorRejected(): void
+    {
+        $this->createWorkflowForTarget(42, 'SilverStripe\\CMS\\Model\\SiteTree');
+
+        $result = $this->service->getStatusForTarget(42, 'SilverStripe\\CMS\\Model\\SiteTree');
+
+        $this->assertFalse($result['isPublished']);
+        $this->assertFalse($result['isRejected']);
+    }
+
     public function testGetStatusForTargetIncludesSteps(): void
     {
         $this->createWorkflowForTarget(43, 'SilverStripe\\CMS\\Model\\SiteTree');

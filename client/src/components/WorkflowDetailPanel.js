@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import i18n from 'i18n';
 import StepTracker from './StepTracker';
 import ActivityFeed from './ActivityFeed';
 import Icon from './Icon';
@@ -47,7 +48,7 @@ const WorkflowDetailPanel = ({ data, onClose, onTransition }) => {
         ref={panelRef}
         tabIndex={-1}
         role="dialog"
-        aria-label="Workflow details"
+        aria-label={i18n._t('WorkflowPanel.DETAILS_LABEL', 'Workflow details')}
         aria-modal="true"
       >
         {/* Header */}
@@ -60,15 +61,17 @@ const WorkflowDetailPanel = ({ data, onClose, onTransition }) => {
               <Icon name={isWorkflowRejected ? 'cross' : 'dot'} />
             </span>
             <h3>
-              {isWorkflowRejected ? 'Rejected' : (data.current || 'Workflow')}
-              {isFinished && !isWorkflowRejected && ' (Complete)'}
+              {isWorkflowRejected
+                ? i18n._t('WorkflowPanel.REJECTED', 'Rejected')
+                : (data.current || i18n._t('WorkflowPanel.WORKFLOW', 'Workflow'))}
+              {isFinished && !isWorkflowRejected && ` ${i18n._t('WorkflowPanel.COMPLETE_SUFFIX', '(Complete)')}`}
             </h3>
           </div>
           <button
             className="workflow-detail__close"
             onClick={onClose}
             type="button"
-            aria-label="Close workflow details"
+            aria-label={i18n._t('WorkflowPanel.CLOSE_DETAILS', 'Close workflow details')}
           >
             <Icon name="cross" />
           </button>
@@ -79,9 +82,14 @@ const WorkflowDetailPanel = ({ data, onClose, onTransition }) => {
           {/* Rejection notice */}
           {isWorkflowRejected && (
             <div className="workflow-detail__section workflow-detail__notice workflow-detail__notice--rejected">
-              <strong>This workflow was rejected.</strong>
+              <strong>{i18n._t('WorkflowPanel.WAS_REJECTED', 'This workflow was rejected.')}</strong>
               {data.history && data.history.length > 0 && data.history[0].author && (
-                <p>By {data.history[0].author} on {data.history[0].date}</p>
+                <p>
+                  {i18n.inject(
+                    i18n._t('WorkflowPanel.REJECTED_BY', 'By {author} on {date}'),
+                    { author: data.history[0].author, date: data.history[0].date }
+                  )}
+                </p>
               )}
             </div>
           )}
@@ -89,20 +97,20 @@ const WorkflowDetailPanel = ({ data, onClose, onTransition }) => {
           {/* Completed notice */}
           {isFinished && !isWorkflowRejected && (
             <div className="workflow-detail__section workflow-detail__notice workflow-detail__notice--complete">
-              <strong>This workflow is complete.</strong>
+              <strong>{i18n._t('WorkflowPanel.IS_COMPLETE', 'This workflow is complete.')}</strong>
             </div>
           )}
           {/* Assignment */}
           {data.assignedTo && (
             <div className="workflow-detail__section">
-              <span className="workflow-detail__label">Assigned to</span>
+              <span className="workflow-detail__label">{i18n._t('WorkflowPanel.ASSIGNED_TO', 'Assigned to')}</span>
               <span className="workflow-detail__value">{data.assignedTo}</span>
             </div>
           )}
 
           {/* Step Tracker */}
           <div className="workflow-detail__section">
-            <span className="workflow-detail__label">Progress</span>
+            <span className="workflow-detail__label">{i18n._t('WorkflowPanel.PROGRESS', 'Progress')}</span>
             <StepTracker
               steps={data.steps || []}
               currentIndex={data.currentIndex || 0}
@@ -113,7 +121,7 @@ const WorkflowDetailPanel = ({ data, onClose, onTransition }) => {
 
           {(nextTransitions.length > 0 || backTransitions.length > 0) && (
             <div className="workflow-detail__section">
-              <span className="workflow-detail__label">Actions</span>
+              <span className="workflow-detail__label">{i18n._t('WorkflowPanel.ACTIONS', 'Actions')}</span>
               <div className="workflow-detail__actions">
                 {[
                   ...nextTransitions.map((t) => [t, true]),
@@ -137,14 +145,14 @@ const WorkflowDetailPanel = ({ data, onClose, onTransition }) => {
           {data.allowCommenting && !isFinished && (
             <div className="workflow-detail__section">
               <FieldLabel className="workflow-detail__label" htmlFor="workflow-comment">
-                Leave a Comment
+                {i18n._t('WorkflowPanel.LEAVE_COMMENT', 'Leave a Comment')}
               </FieldLabel>
               <textarea
                 id="workflow-comment"
                 className="workflow-detail__textarea"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder="Add feedback or notes for the team..."
+                placeholder={i18n._t('WorkflowPanel.COMMENT_PLACEHOLDER', 'Add feedback or notes for the team...')}
                 rows={3}
               />
             </div>
@@ -153,12 +161,12 @@ const WorkflowDetailPanel = ({ data, onClose, onTransition }) => {
           {/* Latest Feedback — standalone section showing most recent comment */}
           {data.latestComment && (
             <div className="workflow-detail__section">
-              <span className="workflow-detail__label">Latest Feedback</span>
+              <span className="workflow-detail__label">{i18n._t('WorkflowPanel.LATEST_FEEDBACK', 'Latest Feedback')}</span>
               <div className="workflow-detail__feedback">
                 <p className="workflow-detail__feedback-text">{data.latestComment.comment}</p>
                 <span className="workflow-detail__feedback-meta">
                   {data.latestComment.author && <strong>{data.latestComment.author}</strong>}
-                  {data.latestComment.author && data.latestComment.step && ' on '}
+                  {data.latestComment.author && data.latestComment.step && ` ${i18n._t('WorkflowPanel.ON', 'on')} `}
                   {data.latestComment.step && <em>{data.latestComment.step}</em>}
                 </span>
               </div>
@@ -167,7 +175,7 @@ const WorkflowDetailPanel = ({ data, onClose, onTransition }) => {
 
           {/* Activity */}
           <div className="workflow-detail__section">
-            <span className="workflow-detail__label">Recent Activity</span>
+            <span className="workflow-detail__label">{i18n._t('WorkflowPanel.RECENT_ACTIVITY', 'Recent Activity')}</span>
             <ActivityFeed history={data.history || []} />
           </div>
         </div>

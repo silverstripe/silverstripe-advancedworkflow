@@ -187,6 +187,8 @@ en:
       one: 'A Workflow Instance'
       other: '{count} Workflow Instances'
     SINGULARNAME: 'Workflow Instance'
+    db_ContentSignature: 'Content signature'
+    db_Outcome: Outcome
     db_TargetClass: 'Target class'
     db_TargetID: 'Target ID'
     db_Title: Title
@@ -213,6 +215,8 @@ en:
   Symbiote\AdvancedWorkflow\Extensions\WorkflowApplicable:
     has_one_WorkflowDefinition: 'Workflow definition'
     many_many_AdditionalWorkflowDefinitions: 'Additional workflow definitions'
+  Symbiote\AdvancedWorkflow\Extensions\WorkflowDefinitionBuilderExtension:
+    TAB_TITLE: 'Visual builder'
   Symbiote\AdvancedWorkflow\Extensions\WorkflowEmbargoExpiryExtension:
     db_AllowEmbargoedEditing: 'Allow embargoed editing'
     db_DesiredPublishDate: 'Desired publish date'
@@ -223,6 +227,12 @@ en:
     has_one_UnPublishJob: 'Un publish job'
   Symbiote\AdvancedWorkflow\Forms\GridField\GridFieldExportAction:
     Export: Export
+  Symbiote\AdvancedWorkflow\Services\WorkflowStatusService:
+    APPROVED: Approved
+    PUBLISHED: Published
+    READY_TO_PUBLISH: 'Approved — Ready to publish'
+    REJECTED: Rejected
+    SUBMITTED: Submitted
   UnpublishItemWorkflowAction:
     DELAYUNPUBDAYSAFTER: ' days'
     DELAYUNPUBDAYSBEFORE: 'Delay unpublishing by '

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import i18n from 'i18n';
 import Icon from './Icon';
 
 const ACTION_ICONS = Object.freeze({
@@ -10,14 +11,16 @@ const ACTION_ICONS = Object.freeze({
   action: 'action',
 });
 
-const ACTION_LABELS = Object.freeze({
-  approval: 'Approval',
-  rejection: 'Rejection',
-  notification: 'Notification',
-  assignment: 'Assignment',
-  publish: 'Publish',
-  action: 'Action',
-});
+const actionLabel = (actionType) => ({
+  approval: i18n._t('WorkflowPanel.ACTIVITY_APPROVAL', 'Approval'),
+  rejection: i18n._t('WorkflowPanel.ACTIVITY_REJECTION', 'Rejection'),
+  notification: i18n._t('WorkflowPanel.ACTIVITY_NOTIFICATION', 'Notification'),
+  assignment: i18n._t('WorkflowPanel.ACTIVITY_ASSIGNMENT', 'Assignment'),
+  publish: i18n._t('WorkflowPanel.ACTIVITY_PUBLISH', 'Publish'),
+}[actionType] || i18n._t('WorkflowPanel.ACTIVITY_ACTION', 'Action'));
+
+// Dates follow the browser's locale.
+const DATE_LOCALE = undefined;
 
 const formatRelativeDate = (dateStr) => {
   if (!dateStr) return '';
@@ -30,12 +33,12 @@ const formatRelativeDate = (dateStr) => {
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
 
-  if (diffSecs < 60) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffSecs < 60) return i18n._t('WorkflowPanel.JUST_NOW', 'Just now');
+  if (diffMins < 60) return i18n.inject(i18n._t('WorkflowPanel.MINUTES_AGO', '{count}m ago'), { count: diffMins });
+  if (diffHours < 24) return i18n.inject(i18n._t('WorkflowPanel.HOURS_AGO', '{count}h ago'), { count: diffHours });
+  if (diffDays < 7) return i18n.inject(i18n._t('WorkflowPanel.DAYS_AGO', '{count}d ago'), { count: diffDays });
 
-  return date.toLocaleDateString('en-NZ', {
+  return date.toLocaleDateString(DATE_LOCALE, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -47,7 +50,7 @@ const formatFullDate = (dateStr) => {
 
   const date = new Date(dateStr.replace(' ', 'T'));
 
-  return date.toLocaleDateString('en-NZ', {
+  return date.toLocaleDateString(DATE_LOCALE, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -61,7 +64,7 @@ const ActivityEntry = ({ entry }) => {
   const [expanded, setExpanded] = useState(hasComment);
 
   const icon = ACTION_ICONS[entry.actionType] || ACTION_ICONS.action;
-  const typeLabel = ACTION_LABELS[entry.actionType] || 'Action';
+  const typeLabel = actionLabel(entry.actionType);
   const isRejection = entry.actionType === 'rejection';
 
   return (
@@ -78,14 +81,14 @@ const ActivityEntry = ({ entry }) => {
         onClick={() => setExpanded(!expanded)}
         type="button"
         aria-expanded={expanded}
-        title="Click for details"
+        title={i18n._t('WorkflowPanel.SHOW_ACTIVITY_DETAILS', 'Click for details')}
       >
         <span className="workflow-activity__icon" aria-hidden="true"><Icon name={icon} /></span>
         <div className="workflow-activity__summary">
           <span className="workflow-activity__title">
             {entry.title}
             {hasComment && !expanded && (
-              <span className="workflow-activity__comment-hint"><Icon name="comment" title="Has feedback" /></span>
+              <span className="workflow-activity__comment-hint"><Icon name="comment" title={i18n._t('WorkflowPanel.HAS_FEEDBACK', 'Has feedback')} /></span>
             )}
           </span>
           <span className="workflow-activity__meta">
@@ -109,24 +112,26 @@ const ActivityEntry = ({ entry }) => {
         <div className="workflow-activity__details">
           {hasComment && (
             <div className="workflow-activity__detail-row">
-              <span className="workflow-activity__detail-label">Feedback</span>
+              <span className="workflow-activity__detail-label">{i18n._t('WorkflowPanel.FEEDBACK', 'Feedback')}</span>
               <p className="workflow-activity__detail-comment">{entry.comment}</p>
             </div>
           )}
           {entry.author && (
             <div className="workflow-activity__detail-row">
-              <span className="workflow-activity__detail-label">By</span>
+              <span className="workflow-activity__detail-label">{i18n._t('WorkflowPanel.BY', 'By')}</span>
               <span className="workflow-activity__detail-value">{entry.author}</span>
             </div>
           )}
           {entry.date && (
             <div className="workflow-activity__detail-row">
-              <span className="workflow-activity__detail-label">Date</span>
+              <span className="workflow-activity__detail-label">{i18n._t('WorkflowPanel.DATE', 'Date')}</span>
               <span className="workflow-activity__detail-value">{formatFullDate(entry.date)}</span>
             </div>
           )}
           {!hasComment && !entry.author && (
-            <p className="workflow-activity__detail-empty">No additional details recorded.</p>
+            <p className="workflow-activity__detail-empty">
+              {i18n._t('WorkflowPanel.NO_ACTIVITY_DETAILS', 'No additional details recorded.')}
+            </p>
           )}
         </div>
       )}
@@ -138,13 +143,13 @@ const ActivityFeed = ({ history }) => {
   if (!history || history.length === 0) {
     return (
       <div className="workflow-activity">
-        <p className="workflow-activity__empty">No activity yet.</p>
+        <p className="workflow-activity__empty">{i18n._t('WorkflowPanel.NO_ACTIVITY', 'No activity yet.')}</p>
       </div>
     );
   }
 
   return (
-    <div className="workflow-activity" role="log" aria-label="Workflow activity">
+    <div className="workflow-activity" role="log" aria-label={i18n._t('WorkflowPanel.ACTIVITY_LABEL', 'Workflow activity')}>
       <ul className="workflow-activity__list">
         {history.map((entry) => (
           <ActivityEntry key={entry.id} entry={entry} />
