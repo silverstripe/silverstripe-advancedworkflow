@@ -16,6 +16,22 @@ import {
 import { CONFIG_FIELDS, TRANSITION_TYPES, metaFor } from '../lib/stepMeta';
 import onActivateKey from '../lib/keyboard';
 import { ENDPOINT, getJson, postJson } from '../lib/api';
+import { LOAD_FAILURE, classifyLoadFailure } from '../lib/workflowResponse';
+
+// Whether the definition's steps have been read from the server. The builder
+// must not render its empty state, or allow saving, until they have: saving
+// an unloaded builder would delete the definition's steps.
+export const LOAD_STATE = Object.freeze({
+  LOADING: 'loading',
+  READY: 'ready',
+  FAILED: 'failed',
+});
+
+const LOAD_FAILURE_MESSAGE = Object.freeze({
+  [LOAD_FAILURE.FORBIDDEN]: 'You do not have permission to edit this workflow.',
+  [LOAD_FAILURE.UNAVAILABLE]: 'The workflow could not be loaded.',
+  [LOAD_FAILURE.NETWORK]: 'The workflow could not be loaded. Check your connection and try again.',
+});
 
 // Advanced standalone steps offered in the "Other steps" area — these
 // sit outside the stage model and are wired manually.
@@ -33,6 +49,8 @@ export default function WorkflowBuilder({ definitionId }) {
   const fieldId = (...parts) => [idBase, ...parts].join('-');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState(null);
+  const [loadState, setLoadState] = useState(definitionId ? LOAD_STATE.LOADING : LOAD_STATE.READY);
+  const [loadError, setLoadError] = useState(null);
 
   const loadMeta = useCallback(() => {
     getJson(ENDPOINT.WORKFLOW_META)
@@ -53,13 +71,23 @@ export default function WorkflowBuilder({ definitionId }) {
   const loadDefinition = useCallback(() => {
     if (!definitionId) return;
 
+    setLoadState(LOAD_STATE.LOADING);
+    setLoadError(null);
     getJson(ENDPOINT.LOAD_DEFINITION, { ID: definitionId })
-      .then(({ ok, data }) => {
-        if (!ok || !data || data.error) return;
+      .then(({ ok, status, data }) => {
+        if (!ok || !data || data.error) {
+          setLoadError(LOAD_FAILURE_MESSAGE[classifyLoadFailure(status)]);
+          setLoadState(LOAD_STATE.FAILED);
+          return;
+        }
         setUserLabels(data.userLabels || {});
         setSteps(Array.isArray(data.steps) ? data.steps : []);
+        setLoadState(LOAD_STATE.READY);
       })
-      .catch(() => {});
+      .catch(() => {
+        setLoadError(LOAD_FAILURE_MESSAGE[classifyLoadFailure(null)]);
+        setLoadState(LOAD_STATE.FAILED);
+      });
   }, [definitionId]);
 
   useEffect(() => {
@@ -462,170 +490,192 @@ export default function WorkflowBuilder({ definitionId }) {
               <Icon name={saveMessage.ok ? 'check' : 'cross'} /> {saveMessage.text}
             </span>
           )}
-          <button className="wf-builder__btn wf-builder__btn--save" onClick={saveWorkflow} disabled={isSaving} type="button">
+          <button
+            className="wf-builder__btn wf-builder__btn--save"
+            onClick={saveWorkflow}
+            disabled={isSaving || loadState !== LOAD_STATE.READY}
+            type="button"
+          >
             {isSaving ? 'Saving…' : 'Save Workflow'}
           </button>
         </div>
       </div>
 
-      <div className="wf-builder__columns">
-        <div className="wf-builder__flow">
-          {!hasAnything && (
-            <div className="wf-builder__flow-empty">
-              <p className="wf-builder__empty-title">No stages yet</p>
-              <p className="wf-builder__empty-desc">
-                Start by adding a review stage. We&apos;ll create the standard steps —
-                assign reviewers, notify them, and wait for approval — and a rejection path,
-                all wired together. You can fine-tune each step afterwards.
-              </p>
-              <button type="button" className="wf-builder__btn wf-builder__btn--primary" onClick={addReviewStageAtEnd}>
-                <Icon name="plus" /> Add your first review stage
-              </button>
-            </div>
-          )}
+      {loadState === LOAD_STATE.LOADING && (
+        <div className="wf-builder__status" role="status" aria-live="polite">
+          Loading workflow…
+        </div>
+      )}
 
-          {model.stages.length > 0 && renderStages()}
+      {loadState === LOAD_STATE.FAILED && (
+        <div className="wf-builder__status wf-builder__status--error" role="alert">
+          <span>{loadError}</span>
+          <button type="button" className="wf-builder__btn" onClick={loadDefinition}>
+            Try again
+          </button>
+        </div>
+      )}
 
-          {hasAnything && (
-            <div className="wf-builder__flow-actions">
-              <button type="button" className="wf-builder__btn wf-builder__btn--primary" onClick={addReviewStageAtEnd}>
-                <Icon name="plus" /> Add a review stage
-              </button>
-              {!hasPublishStage && (
-                <button type="button" className="wf-builder__btn" onClick={addPublishStage}>
-                  <Icon name="publish" /> Add “publish when approved”
+      {loadState === LOAD_STATE.READY && (
+        <div className="wf-builder__columns">
+          <div className="wf-builder__flow">
+            {!hasAnything && (
+              <div className="wf-builder__flow-empty">
+                <p className="wf-builder__empty-title">No stages yet</p>
+                <p className="wf-builder__empty-desc">
+                  Start by adding a review stage. We&apos;ll create the standard steps —
+                  assign reviewers, notify them, and wait for approval — and a rejection path,
+                  all wired together. You can fine-tune each step afterwards.
+                </p>
+                <button type="button" className="wf-builder__btn wf-builder__btn--primary" onClick={addReviewStageAtEnd}>
+                  <Icon name="plus" /> Add your first review stage
                 </button>
-              )}
-            </div>
-          )}
-
-          {model.approvedOutcome.length > 0 && (
-            <div className="wf-builder__section wf-builder__section--approved">
-              <div className="wf-builder__section-label">When approved</div>
-              <p className="wf-builder__section-help">
-                These steps run after the final approval — for example, letting the author know
-                their content passed. Click one to edit it.
-              </p>
-              {model.approvedOutcome.map(renderRawStepRow)}
-            </div>
-          )}
-
-          {model.rejection.length > 0 && (
-            <div className="wf-builder__section wf-builder__section--reject">
-              <div className="wf-builder__section-label">Rejection path</div>
-              <p className="wf-builder__section-help">
-                These steps run only when a reviewer rejects the content. Every stage&apos;s
-                “reject” outcome leads here.
-              </p>
-              {model.rejection.map(renderRawStepRow)}
-            </div>
-          )}
-
-          {model.otherSteps.length > 0 && (
-            <div className="wf-builder__section wf-builder__section--other">
-              <div className="wf-builder__section-label">Other steps</div>
-              <p className="wf-builder__section-help">
-                Steps that aren&apos;t part of a standard review stage. Click one to edit it and
-                set where it leads.
-              </p>
-              {model.otherSteps.map(renderRawStepRow)}
-            </div>
-          )}
-
-          {hasAnything && (
-            <details className="wf-builder__advanced-add">
-              <summary>Add an advanced step</summary>
-              {ADVANCED_STEP_TYPES.map((type) => {
-                const stepMeta = metaFor(type);
-                return (
-                  <button
-                    key={type}
-                    type="button"
-                    className="wf-builder__addon-chip wf-builder__addon-chip--advanced"
-                    title={stepMeta.description}
-                    onClick={() => addAdvancedStep(type)}
-                  >
-                    <Icon name="plus" /> {stepMeta.label}
-                  </button>
-                );
-              })}
-            </details>
-          )}
-        </div>
-
-        <div className="wf-builder__content">
-          {selectedStep ? (
-            <div className="wf-builder__edit">
-              <div className="wf-builder__edit-header">
-                <span className="wf-builder__edit-heading">{selectedStep.title}</span>
-                <span className="wf-builder__edit-badge">
-                  <Icon name={metaFor(selectedStep.type).icon} /> {metaFor(selectedStep.type).label}
-                </span>
               </div>
+            )}
 
-              <p className="wf-builder__edit-desc">{metaFor(selectedStep.type).description}</p>
+            {model.stages.length > 0 && renderStages()}
 
-              <div className="wf-builder__edit-row">
-                <FieldLabel htmlFor={fieldId('title')}>Step name</FieldLabel>
-                <input
-                  id={fieldId('title')}
-                  value={selectedStep.title}
-                  onChange={(e) => updateStep(selectedStep.id, { title: e.target.value })}
-                />
-              </div>
-
-              {selectedConfig && selectedConfig.length > 0 && (
-                <>
-                  <div className="wf-builder__edit-divider" />
-                  {selectedConfig.map((field) => (
-                    <div className="wf-builder__edit-row" key={field.key}>
-                      {field.input !== 'checkbox' && (
-                        <FieldLabel htmlFor={fieldId('config', field.key)}>{field.label}</FieldLabel>
-                      )}
-                      {field.help && <p className="wf-builder__field-help">{field.help}</p>}
-                      {renderConfigField(selectedStep, field)}
-                    </div>
-                  ))}
-                </>
-              )}
-
-              {selectedIsManaged ? (
-                <>
-                  <div className="wf-builder__edit-divider" />
-                  <p className="wf-builder__field-help">
-                    <Icon name="circle" /> This step is part of a review stage — the builder wires it up
-                    automatically. Use the stage card on the left to add, remove or reorder its steps.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="wf-builder__edit-divider" />
-                  <p className="wf-builder__edit-label">What happens after this step?</p>
-                  {renderRawTransitions(selectedStep)}
-
-                  <div className="wf-builder__edit-divider" />
-                  <button
-                    className="wf-builder__btn wf-builder__btn--delete"
-                    onClick={() => removeRawStep(selectedStep.id)}
-                    type="button"
-                  >
-                    Remove this step
+            {hasAnything && (
+              <div className="wf-builder__flow-actions">
+                <button type="button" className="wf-builder__btn wf-builder__btn--primary" onClick={addReviewStageAtEnd}>
+                  <Icon name="plus" /> Add a review stage
+                </button>
+                {!hasPublishStage && (
+                  <button type="button" className="wf-builder__btn" onClick={addPublishStage}>
+                    <Icon name="publish" /> Add “publish when approved”
                   </button>
-                </>
-              )}
-            </div>
-          ) : (
-            <div className="wf-builder__content-empty">
-              <p className="wf-builder__empty-title">{hasAnything ? 'Select a step' : 'No steps yet'}</p>
-              <p className="wf-builder__empty-desc">
-                {hasAnything
-                  ? 'Click a step in a stage on the left to configure who reviews, what the email says, and more.'
-                  : 'Add your first review stage on the left to get started.'}
-              </p>
-            </div>
-          )}
+                )}
+              </div>
+            )}
+
+            {model.approvedOutcome.length > 0 && (
+              <div className="wf-builder__section wf-builder__section--approved">
+                <div className="wf-builder__section-label">When approved</div>
+                <p className="wf-builder__section-help">
+                  These steps run after the final approval — for example, letting the author know
+                  their content passed. Click one to edit it.
+                </p>
+                {model.approvedOutcome.map(renderRawStepRow)}
+              </div>
+            )}
+
+            {model.rejection.length > 0 && (
+              <div className="wf-builder__section wf-builder__section--reject">
+                <div className="wf-builder__section-label">Rejection path</div>
+                <p className="wf-builder__section-help">
+                  These steps run only when a reviewer rejects the content. Every stage&apos;s
+                  “reject” outcome leads here.
+                </p>
+                {model.rejection.map(renderRawStepRow)}
+              </div>
+            )}
+
+            {model.otherSteps.length > 0 && (
+              <div className="wf-builder__section wf-builder__section--other">
+                <div className="wf-builder__section-label">Other steps</div>
+                <p className="wf-builder__section-help">
+                  Steps that aren&apos;t part of a standard review stage. Click one to edit it and
+                  set where it leads.
+                </p>
+                {model.otherSteps.map(renderRawStepRow)}
+              </div>
+            )}
+
+            {hasAnything && (
+              <details className="wf-builder__advanced-add">
+                <summary>Add an advanced step</summary>
+                {ADVANCED_STEP_TYPES.map((type) => {
+                  const stepMeta = metaFor(type);
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      className="wf-builder__addon-chip wf-builder__addon-chip--advanced"
+                      title={stepMeta.description}
+                      onClick={() => addAdvancedStep(type)}
+                    >
+                      <Icon name="plus" /> {stepMeta.label}
+                    </button>
+                  );
+                })}
+              </details>
+            )}
+          </div>
+
+          <div className="wf-builder__content">
+            {selectedStep ? (
+              <div className="wf-builder__edit">
+                <div className="wf-builder__edit-header">
+                  <span className="wf-builder__edit-heading">{selectedStep.title}</span>
+                  <span className="wf-builder__edit-badge">
+                    <Icon name={metaFor(selectedStep.type).icon} /> {metaFor(selectedStep.type).label}
+                  </span>
+                </div>
+
+                <p className="wf-builder__edit-desc">{metaFor(selectedStep.type).description}</p>
+
+                <div className="wf-builder__edit-row">
+                  <FieldLabel htmlFor={fieldId('title')}>Step name</FieldLabel>
+                  <input
+                    id={fieldId('title')}
+                    value={selectedStep.title}
+                    onChange={(e) => updateStep(selectedStep.id, { title: e.target.value })}
+                  />
+                </div>
+
+                {selectedConfig && selectedConfig.length > 0 && (
+                  <>
+                    <div className="wf-builder__edit-divider" />
+                    {selectedConfig.map((field) => (
+                      <div className="wf-builder__edit-row" key={field.key}>
+                        {field.input !== 'checkbox' && (
+                          <FieldLabel htmlFor={fieldId('config', field.key)}>{field.label}</FieldLabel>
+                        )}
+                        {field.help && <p className="wf-builder__field-help">{field.help}</p>}
+                        {renderConfigField(selectedStep, field)}
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {selectedIsManaged ? (
+                  <>
+                    <div className="wf-builder__edit-divider" />
+                    <p className="wf-builder__field-help">
+                      <Icon name="circle" /> This step is part of a review stage — the builder wires it up
+                      automatically. Use the stage card on the left to add, remove or reorder its steps.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="wf-builder__edit-divider" />
+                    <p className="wf-builder__edit-label">What happens after this step?</p>
+                    {renderRawTransitions(selectedStep)}
+
+                    <div className="wf-builder__edit-divider" />
+                    <button
+                      className="wf-builder__btn wf-builder__btn--delete"
+                      onClick={() => removeRawStep(selectedStep.id)}
+                      type="button"
+                    >
+                      Remove this step
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="wf-builder__content-empty">
+                <p className="wf-builder__empty-title">{hasAnything ? 'Select a step' : 'No steps yet'}</p>
+                <p className="wf-builder__empty-desc">
+                  {hasAnything
+                    ? 'Click a step in a stage on the left to configure who reviews, what the email says, and more.'
+                    : 'Add your first review stage on the left to get started.'}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

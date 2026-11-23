@@ -38,4 +38,11 @@ describe('component smoke rendering', () => {
     expect(html).toContain('Visual Workflow Builder');
     expect(html).toContain('Add your first review stage');
   });
+
+  it('shows a loading state, not the empty state, while a definition loads', () => {
+    const html = renderToString(<WorkflowBuilder definitionId="5" />);
+    expect(html).toContain('Loading workflow');
+    expect(html).not.toContain('No stages yet');
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Save Workflow/);
+  });
 });

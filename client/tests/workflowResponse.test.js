@@ -1,5 +1,7 @@
 import {
+  classifyLoadFailure,
   classifyWorkflowResponse,
+  LOAD_FAILURE,
   RESPONSE_FAILED,
   RESPONSE_NOT_APPLICABLE,
   RESPONSE_OK,
@@ -19,5 +21,20 @@ describe('classifyWorkflowResponse', () => {
 
   it.each([500, 502, 0])('treats a %i as a genuine failure', (status) => {
     expect(classifyWorkflowResponse(status)).toBe(RESPONSE_FAILED);
+  });
+});
+
+describe('classifyLoadFailure', () => {
+  it('reports a 403 as a permission problem', () => {
+    expect(classifyLoadFailure(403)).toBe(LOAD_FAILURE.FORBIDDEN);
+  });
+
+  it('reports other statuses as unavailable', () => {
+    expect(classifyLoadFailure(404)).toBe(LOAD_FAILURE.UNAVAILABLE);
+    expect(classifyLoadFailure(500)).toBe(LOAD_FAILURE.UNAVAILABLE);
+  });
+
+  it('reports a failed request as a network problem', () => {
+    expect(classifyLoadFailure(null)).toBe(LOAD_FAILURE.NETWORK);
   });
 });

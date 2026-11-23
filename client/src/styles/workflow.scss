@@ -202,6 +202,23 @@ $wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
     }
   }
 
+  // Shown in place of the columns while the definition loads, or when it
+  // could not be loaded.
+  &__status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: rem(12);
+    padding: rem(16) rem(20);
+    border-radius: $cms-radius;
+
+    @include wf-body-text;
+
+    &--error {
+      @include wf-alert($cms-bg-dark, $cms-border-default, $cms-alert-danger-text);
+    }
+  }
+
   &__flow-empty {
     display: flex;
     flex-direction: column;
