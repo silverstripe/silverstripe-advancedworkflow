@@ -1,8 +1,3 @@
 /node_modules/
 yarn-error.log
 /.yarn/
-vendor/
-public/
-composer.lock
-client/node_modules
-.phpunit.result.cache
