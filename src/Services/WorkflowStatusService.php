@@ -27,8 +27,6 @@ class WorkflowStatusService
     use Injectable;
 
     private const HISTORY_LIMIT = 10;
-    private const STATUS_COMPLETE = 'Complete';
-    private const STATUS_CANCELLED = 'Cancelled';
 
     /**
      * Retrieve the full workflow status payload for a given target record.
@@ -52,7 +50,7 @@ class WorkflowStatusService
 
         $isFinished = in_array(
             $instance->WorkflowStatus,
-            [WorkflowStatusService::STATUS_COMPLETE, WorkflowStatusService::STATUS_CANCELLED],
+            [WorkflowInstance::STATUS_COMPLETE, WorkflowInstance::STATUS_CANCELLED],
             true
         );
         $executedActionIds = $this->getExecutedActionIds($instance);

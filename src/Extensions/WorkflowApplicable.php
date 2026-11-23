@@ -13,6 +13,7 @@ use SilverStripe\Forms\GridField\GridFieldEditButton;
 use SilverStripe\Forms\HiddenField;
 use SilverStripe\Forms\ListboxField;
 use SilverStripe\Forms\ReadonlyField;
+use SilverStripe\Forms\TabSet;
 use SilverStripe\ORM\CMSPreviewable;
 use SilverStripe\Core\Extension;
 use SilverStripe\ORM\DataList;
@@ -20,6 +21,7 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\ManyManyList;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
+use Symbiote\AdvancedWorkflow\Actions\CancelWorkflowAction;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowActionInstance;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowDefinition;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowInstance;
@@ -187,10 +189,14 @@ class WorkflowApplicable extends Extension
         }
     }
 
+    /**
+     * Extension point for the record's CMS actions. Workflow start and transition
+     * buttons are rendered by the workflow status panel (WorkflowStatusBar.js),
+     * which submits them through AdvancedWorkflowExtension's form actions, so no
+     * actions are added here.
+     */
     protected function updateCMSActions(FieldList $actions)
     {
-        // Workflow action buttons are now rendered in the React workflow progress bar panel.
-        // See WorkflowStatusBar.js for approve/reject/start workflow buttons.
     }
 
     protected function createActionMenu()
@@ -366,7 +372,7 @@ class WorkflowApplicable extends Extension
         $latestInstance = WorkflowInstance::get()->filter([
             'TargetClass' => $baseClass,
             'TargetID' => $this->owner->ID,
-            'WorkflowStatus' => 'Complete',
+            'WorkflowStatus' => WorkflowInstance::STATUS_COMPLETE,
         ])->sort('ID', 'DESC')->first();
 
         if (!$latestInstance) {
@@ -379,7 +385,7 @@ class WorkflowApplicable extends Extension
         }
 
         // Check no CancelWorkflowAction was executed — indicates rejection
-        $cancelActionIds = \Symbiote\AdvancedWorkflow\Actions\CancelWorkflowAction::get()->column('ID');
+        $cancelActionIds = CancelWorkflowAction::get()->column('ID');
 
         if (empty($cancelActionIds)) {
             return true;

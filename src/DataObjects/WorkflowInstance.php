@@ -53,6 +53,10 @@ use Symbiote\AdvancedWorkflow\Services\WorkflowService;
  */
 class WorkflowInstance extends DataObject
 {
+    public const STATUS_COMPLETE = 'Complete';
+
+    public const STATUS_CANCELLED = 'Cancelled';
+
     private static $db = array(
         'Title'             => 'Varchar(128)',
         'WorkflowStatus'    => "Enum('Active,Paused,Complete,Cancelled','Active')",
