@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace Symbiote\AdvancedWorkflow\Tests\Controllers;
 
+use SilverStripe\Admin\LeftAndMain;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
+use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
+use SilverStripe\Control\Session;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\FunctionalTest;
 use SilverStripe\Security\SecurityToken;
 use Symbiote\AdvancedWorkflow\Actions\AssignUsersToWorkflowAction;
@@ -230,6 +234,24 @@ class WorkflowBuilderControllerTest extends FunctionalTest
         );
         $this->assertStringStartsWith(Director::absoluteBaseURL(), $endpoints['workflowData']);
         $this->assertStringEndsWith('workflow-ui/workflowData', $endpoints['workflowData']);
+    }
+
+    public function testEndpointsAreInTheCombinedCmsClientConfig(): void
+    {
+        // Other admin sections read the current request while building their config.
+        $request = new HTTPRequest('GET', '/');
+        $request->setSession(new Session([]));
+        Injector::inst()->registerService($request, HTTPRequest::class);
+
+        $config = json_decode(LeftAndMain::singleton()->getCombinedClientConfig(), true);
+        $sections = $config['sections'];
+        $section = array_values(array_filter(
+            $sections,
+            static fn (array $section): bool => $section['name'] === WorkflowBuilderController::class
+        ));
+
+        $this->assertCount(1, $section);
+        $this->assertArrayHasKey('workflowData', $section[0]['endpoints']);
     }
 
     /**
