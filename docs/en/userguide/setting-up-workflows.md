@@ -15,6 +15,10 @@ Approve’ workflow with the following features:
 
 ![Flow diagram of advanced workflow objective](_images/advancedworkflow-review-and-approve.jpg)
 
+> [!TIP]
+> You can also build a workflow like this one as a series of review stages in the *Visual builder* tab of a workflow.
+> See [building workflows with the visual builder](workflow-visual-builder.md).
+
 ## Step 1. Set up user groups
 
 CMS administrators must first set up user groups to be configured in the Workflow. See
