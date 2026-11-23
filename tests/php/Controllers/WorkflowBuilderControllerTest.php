@@ -5,18 +5,31 @@ declare(strict_types=1);
 namespace Symbiote\AdvancedWorkflow\Tests\Controllers;
 
 use SilverStripe\CMS\Model\SiteTree;
-use SilverStripe\Control\HTTPRequest;
+use SilverStripe\Control\Controller;
+use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPResponse;
-use SilverStripe\Dev\SapphireTest;
+use SilverStripe\Dev\FunctionalTest;
+use SilverStripe\Security\SecurityToken;
 use Symbiote\AdvancedWorkflow\Actions\AssignUsersToWorkflowAction;
+use Symbiote\AdvancedWorkflow\Actions\SimpleApprovalWorkflowAction;
 use Symbiote\AdvancedWorkflow\Controllers\WorkflowBuilderController;
+use Symbiote\AdvancedWorkflow\DataObjects\WorkflowActionInstance;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowDefinition;
+use Symbiote\AdvancedWorkflow\DataObjects\WorkflowInstance;
 
-class WorkflowBuilderControllerTest extends SapphireTest
+/**
+ * Requests go through the full HTTP stack so AdminController's access check
+ * and the security token check run as they do in the CMS.
+ */
+class WorkflowBuilderControllerTest extends FunctionalTest
 {
     protected $usesDatabase = true;
 
     private const PAGES_SECTION_ACCESS = 'CMS_ACCESS_CMSMain';
+
+    private const REPORTS_SECTION_ACCESS = 'CMS_ACCESS_ReportAdmin';
+
+    private const REVIEWER_COMMENT = 'Please fix the second paragraph';
 
     protected function setUp(): void
     {
@@ -32,8 +45,8 @@ class WorkflowBuilderControllerTest extends SapphireTest
     {
         $page = $this->createPage();
 
-        $response = $this->callWorkflowData((string)$page->ID, SiteTree::class);
-        $body = json_decode((string)$response->getBody(), true);
+        $response = $this->getWorkflowData((string)$page->ID, SiteTree::class);
+        $body = $this->decode($response);
 
         $this->assertSame(200, $response->getStatusCode());
         $this->assertNull($body['workflow']);
@@ -50,13 +63,12 @@ class WorkflowBuilderControllerTest extends SapphireTest
         $page = $this->createPage(['WorkflowDefinitionID' => $definition->ID]);
         $this->logInWithPermission(WorkflowBuilderControllerTest::PAGES_SECTION_ACCESS);
 
-        $response = $this->callWorkflowData((string)$page->ID, SiteTree::class);
-        $body = json_decode((string)$response->getBody(), true);
+        $response = $this->getWorkflowData((string)$page->ID, SiteTree::class);
 
         $this->assertSame(200, $response->getStatusCode());
         $this->assertSame(
             [['id' => (int)$definition->ID, 'title' => 'Apply for approval']],
-            $body['availableWorkflows']
+            $this->decode($response)['availableWorkflows']
         );
     }
 
@@ -65,7 +77,7 @@ class WorkflowBuilderControllerTest extends SapphireTest
         $definition = $this->createDefinition('Apply for approval', 'Send for review');
         $page = $this->createPage(['WorkflowDefinitionID' => $definition->ID]);
 
-        $body = json_decode((string)$this->callWorkflowData((string)$page->ID, SiteTree::class)->getBody(), true);
+        $body = $this->decode($this->getWorkflowData((string)$page->ID, SiteTree::class));
 
         $this->assertSame('Send for review', $body['availableWorkflows'][0]['title']);
     }
@@ -83,7 +95,7 @@ class WorkflowBuilderControllerTest extends SapphireTest
         ]);
         $this->logInWithPermission(WorkflowBuilderControllerTest::PAGES_SECTION_ACCESS);
 
-        $body = json_decode((string)$this->callWorkflowData((string)$page->ID, SiteTree::class)->getBody(), true);
+        $body = $this->decode($this->getWorkflowData((string)$page->ID, SiteTree::class));
 
         $this->assertSame([], $body['availableWorkflows']);
     }
@@ -93,7 +105,10 @@ class WorkflowBuilderControllerTest extends SapphireTest
         $page = $this->createPage();
         $this->logInWithPermission('NOT_A_CMS_PERMISSION');
 
-        $this->assertSame(403, $this->callWorkflowData((string)$page->ID, SiteTree::class)->getStatusCode());
+        $response = $this->getWorkflowData((string)$page->ID, SiteTree::class);
+
+        $this->assertNotSame(200, $response->getStatusCode());
+        $this->assertStringNotContainsString('availableWorkflows', (string)$response->getBody());
     }
 
     public function testWorkflowDataForbidsRecordsTheUserCannotView(): void
@@ -101,12 +116,45 @@ class WorkflowBuilderControllerTest extends SapphireTest
         $page = $this->createPage(['CanViewType' => 'OnlyTheseUsers']);
         $this->logInWithPermission(WorkflowBuilderControllerTest::PAGES_SECTION_ACCESS);
 
-        $this->assertSame(403, $this->callWorkflowData((string)$page->ID, SiteTree::class)->getStatusCode());
+        $this->assertSame(403, $this->getWorkflowData((string)$page->ID, SiteTree::class)->getStatusCode());
+    }
+
+    public function testWorkflowDataShowsHistoryToUsersWhoCanViewTheWorkflow(): void
+    {
+        $page = $this->createPageWithCommentedWorkflow();
+
+        $body = $this->decode($this->getWorkflowData((string)$page->ID, SiteTree::class));
+
+        $this->assertTrue($body['canViewDetails']);
+        $this->assertSame(WorkflowBuilderControllerTest::REVIEWER_COMMENT, $body['latestComment']['comment']);
+    }
+
+    /**
+     * Viewing a published page does not grant access to its workflow's
+     * history, reviewer comments or assignees.
+     */
+    public function testWorkflowDataHidesHistoryFromUsersWhoCannotViewTheWorkflow(): void
+    {
+        $page = $this->createPageWithCommentedWorkflow();
+        $this->logInWithPermission(WorkflowBuilderControllerTest::REPORTS_SECTION_ACCESS);
+
+        $response = $this->getWorkflowData((string)$page->ID, SiteTree::class);
+        $body = $this->decode($response);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertFalse($body['canViewDetails']);
+        $this->assertSame([], $body['history']);
+        $this->assertNull($body['latestComment']);
+        $this->assertNull($body['assignedTo']);
+        $this->assertStringNotContainsString(
+            WorkflowBuilderControllerTest::REVIEWER_COMMENT,
+            (string)$response->getBody()
+        );
     }
 
     public function testWorkflowDataReportsMissingRecord(): void
     {
-        $this->assertSame(404, $this->callWorkflowData('99999', SiteTree::class)->getStatusCode());
+        $this->assertSame(404, $this->getWorkflowData('99999', SiteTree::class)->getStatusCode());
     }
 
     /**
@@ -115,23 +163,73 @@ class WorkflowBuilderControllerTest extends SapphireTest
      */
     public function testWorkflowDataRejectsSlashEscapedClassName(): void
     {
-        $response = $this->callWorkflowData('1', 'SilverStripe\\\\CMS\\\\Model\\\\SiteTree');
+        $response = $this->getWorkflowData('1', 'SilverStripe\\\\CMS\\\\Model\\\\SiteTree');
 
         $this->assertSame(400, $response->getStatusCode());
-        $this->assertSame('Unknown ClassName', json_decode((string)$response->getBody(), true)['error']);
+        $this->assertSame('Unknown ClassName', $this->decode($response)['error']);
     }
 
     public function testWorkflowDataRejectsNonDataObjectClassName(): void
     {
-        $response = $this->callWorkflowData('1', WorkflowBuilderControllerTest::class);
-
-        $this->assertSame(400, $response->getStatusCode());
+        $this->assertSame(400, $this->getWorkflowData('1', WorkflowBuilderControllerTest::class)->getStatusCode());
     }
 
     public function testWorkflowDataRejectsMissingParameters(): void
     {
-        $this->assertSame(400, $this->callWorkflowData('0', SiteTree::class)->getStatusCode());
-        $this->assertSame(400, $this->callWorkflowData('1', '')->getStatusCode());
+        $this->assertSame(400, $this->getWorkflowData('0', SiteTree::class)->getStatusCode());
+        $this->assertSame(400, $this->getWorkflowData('1', '')->getStatusCode());
+    }
+
+    public function testSaveWorkflowRejectsRequestsWithoutSecurityToken(): void
+    {
+        SecurityToken::enable();
+
+        $response = $this->postSave(['title' => 'Unsafe', 'steps' => []], []);
+
+        $this->assertSame(400, $response->getStatusCode());
+        $this->assertSame(0, WorkflowDefinition::get()->filter('Title', 'Unsafe')->count());
+    }
+
+    public function testSaveWorkflowAcceptsRequestsWithSecurityToken(): void
+    {
+        SecurityToken::enable();
+        $token = SecurityToken::inst();
+
+        $response = $this->postSave(
+            ['title' => 'Safe', 'steps' => []],
+            ['X-' . ucwords(strtolower($token->getName())) => $token->getValue()]
+        );
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame(1, WorkflowDefinition::get()->filter('Title', 'Safe')->count());
+    }
+
+    public function testSaveWorkflowRequiresPost(): void
+    {
+        $this->assertSame(405, $this->get($this->endpoint('saveWorkflow'))->getStatusCode());
+    }
+
+    public function testSaveWorkflowForbidsUsersWhoCannotCreateWorkflows(): void
+    {
+        $this->logInWithPermission(WorkflowBuilderControllerTest::PAGES_SECTION_ACCESS);
+
+        $this->assertSame(403, $this->postSave(['title' => 'Nope', 'steps' => []], [])->getStatusCode());
+    }
+
+    /**
+     * The client reads endpoint URLs from the admin client config. They are
+     * absolute, so they work when the CMS is installed in a subdirectory.
+     */
+    public function testClientConfigEndpointsIncludeTheBaseUrl(): void
+    {
+        $endpoints = WorkflowBuilderController::singleton()->getClientConfig()['endpoints'];
+
+        $this->assertSame(
+            ['workflowMeta', 'searchUsers', 'workflowData', 'loadDefinition', 'saveWorkflow'],
+            array_keys($endpoints)
+        );
+        $this->assertStringStartsWith(Director::absoluteBaseURL(), $endpoints['workflowData']);
+        $this->assertStringEndsWith('workflow-ui/workflowData', $endpoints['workflowData']);
     }
 
     /**
@@ -162,21 +260,73 @@ class WorkflowBuilderControllerTest extends SapphireTest
         return $definition;
     }
 
-    private function callWorkflowData(string $id, string $className): HTTPResponse
+    /**
+     * A published page whose active workflow has a reviewer comment.
+     */
+    private function createPageWithCommentedWorkflow(): SiteTree
     {
-        $request = new HTTPRequest('GET', 'workflow-admin/workflowData', [
-            'ID' => $id,
-            'ClassName' => $className,
-        ]);
+        $definition = WorkflowDefinition::create(['Title' => 'Review']);
+        $definition->write();
+        $review = SimpleApprovalWorkflowAction::create(['Title' => 'Review', 'WorkflowDefID' => $definition->ID]);
+        $review->write();
 
-        return $this->controller($request)->workflowData($request);
+        $page = $this->createPage(['WorkflowDefinitionID' => $definition->ID]);
+        $page->publishSingle();
+
+        $instance = WorkflowInstance::create([
+            'Title' => 'Review',
+            'WorkflowStatus' => 'Paused',
+            'TargetClass' => SiteTree::class,
+            'TargetID' => $page->ID,
+            'DefinitionID' => $definition->ID,
+        ]);
+        $instance->write();
+
+        $actionInstance = WorkflowActionInstance::create([
+            'WorkflowID' => $instance->ID,
+            'BaseActionID' => $review->ID,
+            'Finished' => 1,
+            'Comment' => WorkflowBuilderControllerTest::REVIEWER_COMMENT,
+        ]);
+        $actionInstance->write();
+
+        return $page;
     }
 
-    private function controller(HTTPRequest $request): WorkflowBuilderController
+    private function endpoint(string $action): string
     {
-        $controller = WorkflowBuilderController::create();
-        $controller->setRequest($request);
+        return Controller::join_links('admin', 'workflow-ui', $action);
+    }
 
-        return $controller;
+    private function getWorkflowData(string $id, string $className): HTTPResponse
+    {
+        return $this->get($this->endpoint('workflowData') . '?' . http_build_query([
+            'ID' => $id,
+            'ClassName' => $className,
+        ]));
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @param array<string, string> $headers
+     */
+    private function postSave(array $payload, array $headers): HTTPResponse
+    {
+        return $this->mainSession->sendRequest(
+            'POST',
+            $this->endpoint('saveWorkflow'),
+            [],
+            $headers,
+            null,
+            (string)json_encode($payload)
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function decode(HTTPResponse $response): array
+    {
+        return (array)json_decode((string)$response->getBody(), true);
     }
 }

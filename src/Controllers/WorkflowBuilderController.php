@@ -4,29 +4,40 @@ declare(strict_types=1);
 
 namespace Symbiote\AdvancedWorkflow\Controllers;
 
-use SilverStripe\Control\Controller;
+use Exception;
+use SilverStripe\Admin\AdminController;
+use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
-use SilverStripe\Security\Permission;
+use SilverStripe\Security\SecurityToken;
 use SilverStripe\Versioned\Versioned;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowDefinition;
 use Symbiote\AdvancedWorkflow\Services\WorkflowBuilderService;
 use Symbiote\AdvancedWorkflow\Services\WorkflowStatusService;
 
 /**
- * Thin controller for the workflow builder and status panel API endpoints.
- * All business logic is delegated to WorkflowStatusService and WorkflowBuilderService.
+ * JSON API for the workflow status panel and the visual workflow builder.
+ * Parses requests and checks permissions; WorkflowStatusService and
+ * WorkflowBuilderService hold the logic.
+ *
+ * Endpoint URLs reach the client through the admin client config, so they
+ * follow the site's base URL and admin route.
  */
-class WorkflowBuilderController extends Controller
+class WorkflowBuilderController extends AdminController
 {
-    /**
-     * Permission::check() treats this code as "holds any CMS_ACCESS_* code".
-     */
-    private const ANY_CMS_ACCESS = 'CMS_ACCESS';
+    private static ?string $url_segment = 'workflow-ui';
 
-    private static $allowed_actions = [
+    /**
+     * The status panel renders in CMS edit forms, so access to any one CMS
+     * section is enough; each endpoint then checks the record or definition.
+     */
+    private static string|array $required_permission_codes = 'CMS_ACCESS';
+
+    private static array $allowed_actions = WorkflowBuilderController::ENDPOINTS;
+
+    private const ENDPOINTS = [
         'workflowMeta',
         'searchUsers',
         'workflowData',
@@ -34,36 +45,15 @@ class WorkflowBuilderController extends Controller
         'saveWorkflow',
     ];
 
-    protected function init(): void
+    public function getClientConfig(): array
     {
-        parent::init();
+        $endpoints = [];
 
-        // Set reading mode to Draft for all operations (CMS context)
-        Versioned::set_reading_mode('Stage.Stage');
-    }
+        foreach (WorkflowBuilderController::ENDPOINTS as $action) {
+            $endpoints[$action] = Director::absoluteURL($this->Link($action));
+        }
 
-    /**
-     * Builder/admin endpoints manage workflow definitions — restrict to users
-     * who may create/edit them (CREATE_WORKFLOW via WorkflowDefinition::canCreate).
-     */
-    private function canManageWorkflows(): bool
-    {
-        return WorkflowDefinition::singleton()->canCreate();
-    }
-
-    /**
-     * The status panel renders inside CMS edit forms, so any user with access
-     * to at least one CMS section may call it; per-record access is checked
-     * against the record itself.
-     */
-    private function canUseCms(): bool
-    {
-        return Permission::check(WorkflowBuilderController::ANY_CMS_ACCESS);
-    }
-
-    private function forbidden(): HTTPResponse
-    {
-        return $this->jsonResponse(['error' => 'You do not have permission to perform this action.'], 403);
+        return array_merge(parent::getClientConfig(), ['endpoints' => $endpoints]);
     }
 
     public function workflowMeta(): HTTPResponse
@@ -91,10 +81,6 @@ class WorkflowBuilderController extends Controller
 
     public function workflowData(HTTPRequest $request): HTTPResponse
     {
-        if (!$this->canUseCms()) {
-            return $this->forbidden();
-        }
-
         $recordId = (int)$request->getVar('ID');
         $className = (string)$request->getVar('ClassName');
 
@@ -145,12 +131,19 @@ class WorkflowBuilderController extends Controller
 
     public function saveWorkflow(HTTPRequest $request): HTTPResponse
     {
+        if (!$request->isPOST()) {
+            return $this->jsonResponse(['error' => 'Method not allowed'], 405);
+        }
+
+        if (!SecurityToken::inst()->checkRequest($request)) {
+            return $this->jsonResponse(['error' => 'Invalid security token'], 400);
+        }
+
         if (!$this->canManageWorkflows()) {
             return $this->forbidden();
         }
 
-        $body = $request->getBody();
-        $data = json_decode($body, true);
+        $data = json_decode($request->getBody(), true);
 
         if (!is_array($data)) {
             return $this->jsonResponse(['error' => 'Invalid JSON payload'], 400);
@@ -159,12 +152,23 @@ class WorkflowBuilderController extends Controller
         $service = Injector::inst()->get(WorkflowBuilderService::class);
 
         try {
-            $result = $service->saveDefinition($data);
-
-            return $this->jsonResponse($result);
-        } catch (\Exception $e) {
+            return $this->jsonResponse($service->saveDefinition($data));
+        } catch (Exception $e) {
             return $this->jsonResponse(['error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Builder endpoints manage workflow definitions (CREATE_WORKFLOW).
+     */
+    private function canManageWorkflows(): bool
+    {
+        return WorkflowDefinition::singleton()->canCreate();
+    }
+
+    private function forbidden(): HTTPResponse
+    {
+        return $this->jsonResponse(['error' => 'You do not have permission to perform this action.'], 403);
     }
 
     /**

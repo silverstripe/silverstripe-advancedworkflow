@@ -113,14 +113,16 @@ const WorkflowStatusBar = ({ data, onViewDetails, onTransition, onStartWorkflow 
               Assigned: <strong>{data.assignedTo}</strong>
             </span>
           )}
-          <button
-            className="workflow-bar__details-btn"
-            onClick={onViewDetails}
-            type="button"
-            aria-label="View workflow details"
-          >
-            View Details
-          </button>
+          {data.canViewDetails && (
+            <button
+              className="workflow-bar__details-btn"
+              onClick={onViewDetails}
+              type="button"
+              aria-label="View workflow details"
+            >
+              View Details
+            </button>
+          )}
         </div>
       </div>
 

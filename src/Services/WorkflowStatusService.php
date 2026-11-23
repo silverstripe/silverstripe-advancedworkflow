@@ -99,7 +99,10 @@ class WorkflowStatusService
             }
         }
 
-        $history = $this->getHistory($instance);
+        // History, comments and assignees belong to the workflow, not the
+        // record, so viewing the record alone does not reveal them.
+        $canViewDetails = (bool)$instance->canView();
+        $history = $canViewDetails ? $this->getHistory($instance) : [];
 
         // When workflow is finished, provide option to start a new one
         $availableWorkflows = [];
@@ -115,7 +118,8 @@ class WorkflowStatusService
             'workflowStatus' => $instance->WorkflowStatus,
             'isRejected' => $isRejected,
             'current' => $currentTitle,
-            'assignedTo' => $this->getAssignedUserName($instance),
+            'canViewDetails' => $canViewDetails,
+            'assignedTo' => $canViewDetails ? $this->getAssignedUserName($instance) : null,
             'steps' => $phases['items'],
             'currentIndex' => $phases['currentIndex'],
             'nextTransitions' => $transitions['next'],

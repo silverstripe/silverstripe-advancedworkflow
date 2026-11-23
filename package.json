@@ -47,6 +47,9 @@
     "testEnvironment": "node",
     "roots": [
       "<rootDir>/client/tests"
-    ]
+    ],
+    "moduleNameMapper": {
+      "^lib/Config$": "<rootDir>/client/tests/mocks/Config.js"
+    }
   }
 }

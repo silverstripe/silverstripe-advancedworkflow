@@ -11,10 +11,6 @@ Symbiote\AdvancedWorkflow\DataObjects\WorkflowDefinition:
   extensions:
     - Symbiote\AdvancedWorkflow\Extensions\WorkflowDefinitionBuilderExtension
 
-SilverStripe\Control\Director:
-  rules:
-    'workflow-admin': 'Symbiote\AdvancedWorkflow\Controllers\WorkflowBuilderController'
-
 SilverStripe\Admin\LeftAndMain:
   extra_requirements_css:
     - 'symbiote/silverstripe-advancedworkflow:client/dist/styles/workflow-ui.css'

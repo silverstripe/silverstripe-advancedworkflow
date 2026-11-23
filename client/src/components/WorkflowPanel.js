@@ -5,8 +5,7 @@ import Icon from './Icon';
 import { classifyWorkflowResponse, RESPONSE_NOT_APPLICABLE, RESPONSE_OK } from '../lib/workflowResponse';
 import submitWorkflowAction, { WORKFLOW_FORM_ACTION, WORKFLOW_FORM_FIELD } from '../lib/cmsForm';
 import { TRANSITION_VARIANT } from '../lib/transitionVariant';
-
-const API_BASE = '/workflow-admin';
+import { ENDPOINT, getJson } from '../lib/api';
 
 const WorkflowPanel = ({ recordID, className }) => {
   const [data, setData] = useState(null);
@@ -15,17 +14,15 @@ const WorkflowPanel = ({ recordID, className }) => {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(() => {
-    const query = `ID=${encodeURIComponent(recordID)}&ClassName=${encodeURIComponent(className)}`;
-
     setLoading(true);
-    fetch(`${API_BASE}/workflowData?${query}`, { credentials: 'same-origin' })
-      .then((res) => {
-        const outcome = classifyWorkflowResponse(res.status);
+    getJson(ENDPOINT.WORKFLOW_DATA, { ID: recordID, ClassName: className })
+      .then(({ status, data: result }) => {
+        const outcome = classifyWorkflowResponse(status);
 
         if (outcome === RESPONSE_NOT_APPLICABLE) return null;
-        if (outcome !== RESPONSE_OK) throw new Error(`Failed to load workflow data (${res.status})`);
+        if (outcome !== RESPONSE_OK) throw new Error(`Failed to load workflow data (${status})`);
 
-        return res.json();
+        return result;
       })
       .then((result) => {
         setData(result);

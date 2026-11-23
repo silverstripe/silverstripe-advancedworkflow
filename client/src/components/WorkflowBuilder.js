@@ -15,8 +15,7 @@ import {
 } from '../lib/workflowStages';
 import { CONFIG_FIELDS, TRANSITION_TYPES, metaFor } from '../lib/stepMeta';
 import onActivateKey from '../lib/keyboard';
-
-const API_BASE = '/workflow-admin';
+import { ENDPOINT, getJson, postJson } from '../lib/api';
 
 // Advanced standalone steps offered in the "Other steps" area — these
 // sit outside the stage model and are wired manually.
@@ -36,17 +35,17 @@ export default function WorkflowBuilder({ definitionId }) {
   const [saveMessage, setSaveMessage] = useState(null);
 
   const loadMeta = useCallback(() => {
-    fetch(`${API_BASE}/workflowMeta`)
-      .then((res) => res.json())
-      .then(setMeta)
+    getJson(ENDPOINT.WORKFLOW_META)
+      .then(({ ok, data }) => {
+        if (ok) setMeta(data);
+      })
       .catch(() => {});
   }, []);
 
   // Server-side user search (users aren't preloaded — see workflowMeta).
   const searchUsers = useCallback(
-    (term) => fetch(`${API_BASE}/searchUsers?term=${encodeURIComponent(term)}`)
-      .then((res) => res.json())
-      .then((list) => (Array.isArray(list) ? list : []))
+    (term) => getJson(ENDPOINT.SEARCH_USERS, { term })
+      .then(({ ok, data }) => (ok && Array.isArray(data) ? data : []))
       .catch(() => []),
     []
   );
@@ -54,10 +53,9 @@ export default function WorkflowBuilder({ definitionId }) {
   const loadDefinition = useCallback(() => {
     if (!definitionId) return;
 
-    fetch(`${API_BASE}/loadDefinition?ID=${definitionId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data || data.error) return;
+    getJson(ENDPOINT.LOAD_DEFINITION, { ID: definitionId })
+      .then(({ ok, data }) => {
+        if (!ok || !data || data.error) return;
         setUserLabels(data.userLabels || {});
         setSteps(Array.isArray(data.steps) ? data.steps : []);
       })
@@ -143,20 +141,15 @@ export default function WorkflowBuilder({ definitionId }) {
     setSaveMessage(null);
 
     try {
-      const response = await fetch(`${API_BASE}/saveWorkflow`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          id: definitionId || null,
-          steps: steps.map((s) => ({
-            id: s.id,
-            title: s.title,
-            type: s.type,
-            config: s.config || {},
-            transitions: s.transitions || [],
-          })),
-        }),
+      const response = await postJson(ENDPOINT.SAVE_WORKFLOW, {
+        id: definitionId || null,
+        steps: steps.map((s) => ({
+          id: s.id,
+          title: s.title,
+          type: s.type,
+          config: s.config || {},
+          transitions: s.transitions || [],
+        })),
       });
 
       if (!response.ok) throw new Error('Save failed');
