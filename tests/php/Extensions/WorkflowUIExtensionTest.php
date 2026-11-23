@@ -5,15 +5,30 @@ declare(strict_types=1);
 namespace Symbiote\AdvancedWorkflow\Tests\Extensions;
 
 use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\Form;
 use SilverStripe\Forms\TabSet;
 use Symbiote\AdvancedWorkflow\Extensions\WorkflowUIExtension;
+use Symbiote\AdvancedWorkflow\Services\WorkflowService;
 
 class WorkflowUIExtensionTest extends SapphireTest
 {
     protected $usesDatabase = true;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Config::modify()->set(WorkflowService::class, 'enable_workflow_panel', true);
+    }
+
+    public function testNoPanelRootWhenPanelDisabled(): void
+    {
+        Config::modify()->set(WorkflowService::class, 'enable_workflow_panel', false);
+
+        $this->assertNull($this->panelField($this->makePage()));
+    }
 
     /**
      * Regression: the class name was escaped with addslashes(), which doubles the

@@ -6,13 +6,15 @@ namespace Symbiote\AdvancedWorkflow\Extensions;
 
 use SilverStripe\Core\Convert;
 use SilverStripe\Core\Extension;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Forms\Form;
 use SilverStripe\Forms\LiteralField;
 use SilverStripe\ORM\DataObject;
+use Symbiote\AdvancedWorkflow\Services\WorkflowService;
 
 /**
- * Extension on CMSMain that injects the workflow status panel
- * container into the page edit form.
+ * Extension on CMSMain that injects the workflow status panel container into
+ * the page edit form when WorkflowService.enable_workflow_panel is on.
  */
 class WorkflowUIExtension extends Extension
 {
@@ -21,6 +23,10 @@ class WorkflowUIExtension extends Extension
         $record = $form->getRecord();
 
         if (!$record instanceof DataObject || !$record->exists()) {
+            return;
+        }
+
+        if (!Injector::inst()->get(WorkflowService::class)->rendersWorkflowPanelFor($record)) {
             return;
         }
 
