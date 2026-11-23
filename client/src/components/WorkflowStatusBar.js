@@ -21,7 +21,7 @@ const TONE = Object.freeze({
 
 const STATUS_INDICATOR = Object.freeze({
   [WORKFLOW_STATUS.ACTIVE]: { tone: TONE.WARNING, icon: 'dot', label: 'In Progress' },
-  [WORKFLOW_STATUS.PAUSED]: { tone: TONE.MODIFIED, icon: 'pause', label: 'Paused' },
+  [WORKFLOW_STATUS.PAUSED]: { tone: TONE.MODIFIED, icon: 'approval', label: 'Awaiting approval' },
   [WORKFLOW_STATUS.COMPLETE]: { tone: TONE.SUCCESS, icon: 'check', label: 'Complete' },
   [WORKFLOW_STATUS.CANCELLED]: { tone: TONE.DANGER, icon: 'cross', label: 'Cancelled' },
 });
