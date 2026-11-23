@@ -328,8 +328,8 @@ class WorkflowBuilderService
     }
 
     /**
-     * Create or update a single action, converting its class if the step type
-     * changed, and applying config without clobbering untouched fields.
+     * Create or update a single action, converting its class only when the
+     * step type changed, and applying config without clobbering untouched fields.
      *
      * @param array<string, mixed> $step
      */
@@ -343,7 +343,9 @@ class WorkflowBuilderService
         $targetClass = $type->actionClass();
 
         if ($existing instanceof WorkflowAction) {
-            $action = get_class($existing) === $targetClass
+            // Plain and project-specific action classes keep their own class
+            // and data unless the editor picked a different step type.
+            $action = WorkflowStepType::fromActionClass(get_class($existing)) === $type
                 ? $existing
                 : $existing->newClassInstance($targetClass);
         } else {

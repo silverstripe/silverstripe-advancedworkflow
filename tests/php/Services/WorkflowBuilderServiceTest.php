@@ -16,6 +16,7 @@ use Symbiote\AdvancedWorkflow\DataObjects\WorkflowAction;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowDefinition;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowTransition;
 use Symbiote\AdvancedWorkflow\Services\WorkflowBuilderService;
+use Symbiote\AdvancedWorkflow\Tests\Services\WorkflowBuilderServiceTest\CustomNotifyAction;
 
 /**
  * @phpcs:disable SlevomatCodingStandard.TypeHints.PropertyTypeHint
@@ -23,6 +24,10 @@ use Symbiote\AdvancedWorkflow\Services\WorkflowBuilderService;
 class WorkflowBuilderServiceTest extends SapphireTest
 {
     protected $usesDatabase = true;
+
+    protected static $extra_dataobjects = [
+        CustomNotifyAction::class,
+    ];
 
     private WorkflowBuilderService $service;
 
@@ -191,6 +196,53 @@ class WorkflowBuilderServiceTest extends SapphireTest
         $reloaded = NotifyUsersWorkflowAction::get()->byID($notify->ID);
         $this->assertSame('Original subject', $reloaded->EmailSubject);
         $this->assertSame('Original body', $reloaded->EmailTemplate);
+    }
+
+    public function testUnchangedSaveKeepsPlainWorkflowActionClass(): void
+    {
+        $definition = WorkflowDefinition::create(['Title' => 'Plain']);
+        $definition->write();
+        $action = WorkflowAction::create(['Title' => 'Plain step', 'WorkflowDefID' => $definition->ID, 'Sort' => 1]);
+        $action->write();
+
+        $this->service->saveDefinition($this->service->loadDefinition((int)$definition->ID));
+
+        $this->assertSame(WorkflowAction::class, WorkflowAction::get()->byID($action->ID)->ClassName);
+    }
+
+    public function testUnchangedSaveKeepsCustomActionClassAndData(): void
+    {
+        $definition = WorkflowDefinition::create(['Title' => 'Custom']);
+        $definition->write();
+        $action = CustomNotifyAction::create([
+            'Title' => 'Notify team',
+            'Channel' => 'editorial',
+            'WorkflowDefID' => $definition->ID,
+            'Sort' => 1,
+        ]);
+        $action->write();
+
+        $this->service->saveDefinition($this->service->loadDefinition((int)$definition->ID));
+
+        $reloaded = WorkflowAction::get()->byID($action->ID);
+        $this->assertInstanceOf(CustomNotifyAction::class, $reloaded);
+        $this->assertSame('editorial', $reloaded->Channel);
+    }
+
+    public function testChangingTypeOfCustomActionConvertsIt(): void
+    {
+        $definition = WorkflowDefinition::create(['Title' => 'Custom']);
+        $definition->write();
+        $action = CustomNotifyAction::create(['Title' => 'Notify', 'WorkflowDefID' => $definition->ID, 'Sort' => 1]);
+        $action->write();
+
+        $this->service->saveDefinition([
+            'id' => $definition->ID,
+            'title' => 'Custom',
+            'steps' => [['id' => (string)$action->ID, 'title' => 'Notify', 'type' => 'publish', 'branches' => []]],
+        ]);
+
+        $this->assertInstanceOf(PublishItemWorkflowAction::class, WorkflowAction::get()->byID($action->ID));
     }
 
     /**
