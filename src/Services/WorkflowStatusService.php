@@ -16,6 +16,7 @@ use Symbiote\AdvancedWorkflow\DataObjects\WorkflowAction;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowActionInstance;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowDefinition;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowInstance;
+use Symbiote\AdvancedWorkflow\Enum\WorkflowOutcome;
 use Symbiote\AdvancedWorkflow\Services\WorkflowService;
 
 /**
@@ -55,7 +56,8 @@ class WorkflowStatusService
             true
         );
         $executedActionIds = $this->getExecutedActionIds($instance);
-        $isRejected = $isFinished && $this->wasRejected($instance);
+        $outcome = Injector::inst()->get(WorkflowApprovalService::class)->getOutcome($instance);
+        $isRejected = $isFinished && $outcome === WorkflowOutcome::Rejected;
         $isPublished = $isFinished
             && !$isRejected
             && $this->wasPublishedAfterWorkflow($targetId, $targetClass, $instance);
@@ -538,9 +540,6 @@ class WorkflowStatusService
     }
 
     /**
-     * @return array<int, array{message: string|null, date: string|null, author: string|null}>
-     */
-    /**
      * Get IDs of all definition actions that were executed in this workflow instance.
      *
      * @return int[]
@@ -562,30 +561,6 @@ class WorkflowStatusService
         }
 
         return array_unique($ids);
-    }
-
-    /**
-     * Determine if a finished workflow ended via a rejection path.
-     * Checks the executed action titles for rejection indicators.
-     */
-    private function wasRejected(WorkflowInstance $instance): bool
-    {
-        $actionInstances = WorkflowActionInstance::get()
-            ->filter([
-                'WorkflowID' => $instance->ID,
-                'Finished' => 1,
-            ])
-            ->sort('Created', 'DESC');
-
-        foreach ($actionInstances as $actionInstance) {
-            $title = strtolower($actionInstance->getTitle());
-
-            if (str_contains($title, 'reject') || str_contains($title, 'cancel')) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private function getHistory(WorkflowInstance $instance): array

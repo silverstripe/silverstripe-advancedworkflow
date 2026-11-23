@@ -31,6 +31,7 @@ use SilverStripe\Versioned\Versioned;
 use Symbiote\AdvancedWorkflow\Actions\AssignUsersToWorkflowAction;
 use Symbiote\AdvancedWorkflow\Extensions\WorkflowApplicable;
 use Symbiote\AdvancedWorkflow\Extensions\FileWorkflowApplicable;
+use Symbiote\AdvancedWorkflow\Services\WorkflowApprovalService;
 use Symbiote\AdvancedWorkflow\Services\WorkflowService;
 
 /**
@@ -62,6 +63,10 @@ class WorkflowInstance extends DataObject
         'WorkflowStatus'    => "Enum('Active,Paused,Complete,Cancelled','Active')",
         'TargetClass'       => 'Varchar(255)',
         'TargetID'          => 'Int',
+        // A WorkflowOutcome value, set when the workflow completes.
+        'Outcome'           => 'Int',
+        // WorkflowApprovalService::contentSignature() of the approved content.
+        'ContentSignature'  => 'Varchar(64)',
     );
 
     private static $has_one = array(
@@ -418,8 +423,9 @@ class WorkflowInstance extends DataObject
         } else {
             // see if there are any transitions available, even if they are not valid.
             if ($action->Finished && !count($action->BaseAction()->Transitions() ?? [])) {
-                $this->WorkflowStatus  = 'Complete';
+                $this->WorkflowStatus  = WorkflowInstance::STATUS_COMPLETE;
                 $this->CurrentActionID = 0;
+                Injector::inst()->get(WorkflowApprovalService::class)->recordOutcome($this);
             } else {
                 $this->WorkflowStatus = 'Paused';
             }

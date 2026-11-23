@@ -5,6 +5,7 @@ namespace Symbiote\AdvancedWorkflow\Extensions;
 use SilverStripe\CMS\Controllers\CMSMain;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\FormAction;
@@ -24,10 +25,10 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\ManyManyList;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
-use Symbiote\AdvancedWorkflow\Actions\CancelWorkflowAction;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowActionInstance;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowDefinition;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowInstance;
+use Symbiote\AdvancedWorkflow\Services\WorkflowApprovalService;
 use Symbiote\AdvancedWorkflow\Services\WorkflowService;
 use Symbiote\QueuedJobs\Services\AbstractQueuedJob;
 
@@ -424,8 +425,12 @@ class WorkflowApplicable extends Extension
             }
         }
 
-        if ($this->getWorkflowService()->isWorkflowPanelEnabled() && $this->hasApprovedWorkflow()) {
-            return true;
+        // An approval lifts the workflow's own publish restriction only; the
+        // record's usual publish permissions still decide.
+        if ($this->getWorkflowService()->isWorkflowPanelEnabled()
+            && Injector::inst()->get(WorkflowApprovalService::class)->isCurrentContentApproved($this->owner)
+        ) {
+            return null;
         }
 
         // use definition to determine if publishing directly is allowed
@@ -458,44 +463,6 @@ class WorkflowApplicable extends Extension
         if ($active = $this->getWorkflowInstance()) {
             return $active->canEditTarget();
         }
-    }
-
-    /**
-     * Check if the most recent workflow for this record completed successfully (approved, not cancelled/rejected)
-     * and the record hasn't been modified since. Used to allow publishing after workflow approval.
-     */
-    private function hasApprovedWorkflow(): bool
-    {
-        $baseClass = DataObject::getSchema()->baseDataClass($this->owner);
-
-        $latestInstance = WorkflowInstance::get()->filter([
-            'TargetClass' => $baseClass,
-            'TargetID' => $this->owner->ID,
-            'WorkflowStatus' => WorkflowInstance::STATUS_COMPLETE,
-        ])->sort('ID', 'DESC')->first();
-
-        if (!$latestInstance) {
-            return false;
-        }
-
-        // If record was edited after workflow completed, approval is stale
-        if ($this->owner->LastEdited > $latestInstance->LastEdited) {
-            return false;
-        }
-
-        // Check no CancelWorkflowAction was executed — indicates rejection
-        $cancelActionIds = CancelWorkflowAction::get()->column('ID');
-
-        if (empty($cancelActionIds)) {
-            return true;
-        }
-
-        $cancelledAction = $latestInstance->Actions()->filter([
-            'BaseActionID' => $cancelActionIds,
-            'Finished' => 1,
-        ])->first();
-
-        return !$cancelledAction;
     }
 
     /**

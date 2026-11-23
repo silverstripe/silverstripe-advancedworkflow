@@ -12,11 +12,14 @@ use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Forms\FieldList;
+use SilverStripe\Security\Group;
+use SilverStripe\Security\InheritedPermissions;
 use SilverStripe\Security\Member;
 use Symbiote\AdvancedWorkflow\Actions\SimpleApprovalWorkflowAction;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowDefinition;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowInstance;
-use Symbiote\AdvancedWorkflow\Extensions\WorkflowApplicable;
+use Symbiote\AdvancedWorkflow\Enum\WorkflowOutcome;
+use Symbiote\AdvancedWorkflow\Services\WorkflowApprovalService;
 use Symbiote\AdvancedWorkflow\Services\WorkflowService;
 
 /**
@@ -98,28 +101,72 @@ class WorkflowPanelFlagTest extends SapphireTest
         $this->assertFalse(Injector::inst()->get(WorkflowService::class)->rendersWorkflowPanelFor($this->page));
     }
 
-    public function testApprovedWorkflowDoesNotGrantPublishWhenPanelDisabled(): void
+    public function testApprovedWorkflowDoesNotLiftRestrictionWhenPanelDisabled(): void
     {
-        $this->completeWorkflowForPage();
+        $this->approvePage();
 
-        $this->assertNotTrue($this->canPublishAsAuthor());
+        $this->assertFalse($this->page->canPublish($this->createAuthor()));
     }
 
-    public function testApprovedWorkflowGrantsPublishWhenPanelEnabled(): void
+    public function testApprovedWorkflowLetsAnAuthorPublishWhenPanelEnabled(): void
     {
         $this->enablePanel();
-        $this->completeWorkflowForPage();
+        $this->approvePage();
 
-        $this->assertTrue($this->canPublishAsAuthor());
+        $this->assertTrue($this->page->canPublish($this->createAuthor()));
+    }
+
+    public function testUnapprovedPageCannotBePublishedByAnAuthor(): void
+    {
+        $this->enablePanel();
+
+        $this->assertFalse($this->page->canPublish($this->createAuthor()));
+    }
+
+    public function testApprovalDoesNotLetVisitorsPublish(): void
+    {
+        $this->enablePanel();
+        $this->approvePage();
+        $this->logOut();
+
+        $this->assertFalse($this->page->canPublish());
+    }
+
+    public function testApprovalDoesNotLetUsersWithoutPageAccessPublish(): void
+    {
+        $this->enablePanel();
+        $this->approvePage();
+
+        $reportsOnly = $this->createMemberWithPermission('CMS_ACCESS_ReportAdmin');
+        $this->logInAs($reportsOnly);
+
+        $this->assertFalse($this->page->canPublish($reportsOnly));
+    }
+
+    public function testApprovalDoesNotLetUsersWhoCannotEditThePagePublish(): void
+    {
+        $this->enablePanel();
+        $this->approvePage();
+
+        $editors = Group::create(['Title' => 'Page editors']);
+        $editors->write();
+        $this->page->CanEditType = InheritedPermissions::ONLY_THESE_USERS;
+        $this->page->write();
+        $this->page->EditorGroups()->add($editors);
+        $this->approvePage();
+
+        $this->assertFalse($this->page->canPublish($this->createAuthor()));
     }
 
     public function testEditAfterApprovalRevokesPublishWhenPanelEnabled(): void
     {
         $this->enablePanel();
-        $instance = $this->completeWorkflowForPage();
-        $this->page->LastEdited = date('Y-m-d H:i:s', strtotime($instance->LastEdited) + 60);
+        $this->approvePage();
 
-        $this->assertNotTrue($this->canPublishAsAuthor());
+        $this->page->Title = 'Changed after approval';
+        $this->page->write();
+
+        $this->assertFalse($this->page->canPublish($this->createAuthor()));
     }
 
     private function enablePanel(): void
@@ -145,7 +192,10 @@ class WorkflowPanelFlagTest extends SapphireTest
         return $names;
     }
 
-    private function completeWorkflowForPage(): WorkflowInstance
+    /**
+     * Record a completed, approved workflow covering the page's current content.
+     */
+    private function approvePage(): void
     {
         $instance = WorkflowInstance::create([
             'Title' => 'Completed review',
@@ -153,23 +203,21 @@ class WorkflowPanelFlagTest extends SapphireTest
             'TargetClass' => SiteTree::class,
             'TargetID' => $this->page->ID,
             'DefinitionID' => $this->definition->ID,
+            'Outcome' => WorkflowOutcome::Approved->value,
+            'ContentSignature' => WorkflowApprovalService::create()->contentSignature($this->page),
         ]);
         $instance->write();
-        $this->page->LastEdited = $instance->LastEdited;
-
-        return $instance;
     }
 
     /**
-     * Calls the extension directly: SiteTree::canPublish() short-circuits for
-     * administrators, which would hide the workflow decision.
+     * WorkflowApplicable::canPublish() reads the logged-in member, so the
+     * author is logged in as well as passed in.
      */
-    private function canPublishAsAuthor(): ?bool
+    private function createAuthor(): Member
     {
-        $this->logInWithPermission('CMS_ACCESS_CMSMain');
-        $extension = Injector::inst()->create(WorkflowApplicable::class);
-        $extension->setOwner($this->page);
+        $author = $this->createMemberWithPermission('CMS_ACCESS_CMSMain');
+        $this->logInAs($author);
 
-        return $extension->canPublish();
+        return $author;
     }
 }
