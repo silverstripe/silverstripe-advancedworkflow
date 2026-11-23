@@ -29,7 +29,7 @@ const step = (id, title, type, transitions = []) => ({
   transitions,
 });
 
-// The canonical shape produced by CreateExampleWorkflowTask:
+// A two-stage review workflow, as the builder loads it:
 // two review stages sharing one rejection path.
 const exampleSteps = () => [
   step('1', 'Assign to Content Reviewers', STEP_TYPES.ASSIGN, [tx('t1', 'Notify', '2')]),
