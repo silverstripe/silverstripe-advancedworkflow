@@ -11,6 +11,7 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\Security\Group;
 use SilverStripe\Security\Member;
 use SilverStripe\Versioned\Versioned;
+use Symbiote\AdvancedWorkflow\Actions\CancelWorkflowAction;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowAction;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowActionInstance;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowDefinition;
@@ -503,6 +504,8 @@ class WorkflowStatusService
             $entry = [
                 'id' => $transition->ID,
                 'title' => $transition->Title,
+                // Rejections are styled as destructive actions wherever they sit in the flow.
+                'isRejection' => $targetAction instanceof CancelWorkflowAction,
             ];
 
             if ((int)$targetAction->Sort > $currentSort) {

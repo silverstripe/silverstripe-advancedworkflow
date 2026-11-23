@@ -6,6 +6,7 @@ namespace Symbiote\AdvancedWorkflow\Tests\Services;
 
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Security\Member;
+use Symbiote\AdvancedWorkflow\Actions\CancelWorkflowAction;
 use Symbiote\AdvancedWorkflow\Actions\SimpleApprovalWorkflowAction;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowAction;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowActionInstance;
@@ -80,6 +81,30 @@ class WorkflowStatusServiceTest extends SapphireTest
 
         $this->assertContains('Approve', $nextTitles);
         $this->assertContains('Reject', $backTitles);
+    }
+
+    public function testTransitionToCancelActionIsMarkedAsRejection(): void
+    {
+        $setup = $this->createWorkflowForTarget(46, 'SilverStripe\\CMS\\Model\\SiteTree');
+        [, $review] = $setup['actions'];
+
+        $cancel = CancelWorkflowAction::create();
+        $cancel->Title = 'Rejected';
+        $cancel->Sort = 3;
+        $cancel->WorkflowDefID = $review->WorkflowDefID;
+        $cancel->write();
+
+        $decline = WorkflowTransition::create();
+        $decline->Title = 'Decline';
+        $decline->ActionID = $review->ID;
+        $decline->NextActionID = $cancel->ID;
+        $decline->write();
+
+        $result = $this->service->getStatusForTarget(46, 'SilverStripe\\CMS\\Model\\SiteTree');
+        $byTitle = array_column($result['nextTransitions'], 'isRejection', 'title');
+
+        $this->assertTrue($byTitle['Decline']);
+        $this->assertFalse($byTitle['Approve']);
     }
 
     public function testGetAssignmentMetaReturnsGroupsAndUsers(): void

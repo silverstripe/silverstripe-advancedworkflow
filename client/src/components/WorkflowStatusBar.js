@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import StepTracker from './StepTracker';
 import Icon from './Icon';
 import { WORKFLOW_FORM_ACTION } from '../lib/cmsForm';
+import { transitionVariant, TRANSITION_VARIANT } from '../lib/transitionVariant';
 
 const WORKFLOW_STATUS = Object.freeze({
   ACTIVE: 'Active',
@@ -150,22 +151,14 @@ const WorkflowStatusBar = ({ data, onViewDetails, onTransition, onStartWorkflow 
           </div>
 
           <div className="workflow-bar__actions-right">
-            {nextTransitions.map((t) => (
+            {[
+              ...nextTransitions.map((t) => [t, true]),
+              ...backTransitions.map((t) => [t, false]),
+            ].map(([t, isForward]) => (
               <button
                 key={t.id}
                 name={WORKFLOW_FORM_ACTION.UPDATE}
-                className="workflow-bar__action-btn workflow-bar__action-btn--approve"
-                onClick={(e) => handleAction(e.currentTarget, t.id)}
-                type="button"
-              >
-                {t.title}
-              </button>
-            ))}
-            {backTransitions.map((t) => (
-              <button
-                key={t.id}
-                name={WORKFLOW_FORM_ACTION.UPDATE}
-                className="workflow-bar__action-btn workflow-bar__action-btn--reject"
+                className={`workflow-bar__action-btn workflow-bar__action-btn--${transitionVariant(t, isForward)}`}
                 onClick={(e) => handleAction(e.currentTarget, t.id)}
                 type="button"
               >
@@ -187,7 +180,7 @@ const WorkflowStatusBar = ({ data, onViewDetails, onTransition, onStartWorkflow 
               <button
                 key={wf.id}
                 name={WORKFLOW_FORM_ACTION.START}
-                className="workflow-bar__action-btn workflow-bar__action-btn--approve"
+                className={`workflow-bar__action-btn workflow-bar__action-btn--${TRANSITION_VARIANT.PRIMARY}`}
                 onClick={(e) => onStartWorkflow && onStartWorkflow(e.currentTarget, wf.id)}
                 type="button"
               >

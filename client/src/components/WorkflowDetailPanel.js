@@ -4,6 +4,7 @@ import ActivityFeed from './ActivityFeed';
 import Icon from './Icon';
 import FieldLabel from './FieldLabel';
 import { WORKFLOW_FORM_ACTION } from '../lib/cmsForm';
+import { transitionVariant } from '../lib/transitionVariant';
 
 const WorkflowDetailPanel = ({ data, onClose, onTransition }) => {
   const [comment, setComment] = useState('');
@@ -33,6 +34,9 @@ const WorkflowDetailPanel = ({ data, onClose, onTransition }) => {
   };
 
   if (!data) return null;
+
+  const nextTransitions = data.nextTransitions || [];
+  const backTransitions = data.backTransitions || [];
 
   return (
     <div className="workflow-overlay">
@@ -107,39 +111,22 @@ const WorkflowDetailPanel = ({ data, onClose, onTransition }) => {
             />
           </div>
 
-          {/* Forward Transitions */}
-          {data.nextTransitions && data.nextTransitions.length > 0 && (
+          {(nextTransitions.length > 0 || backTransitions.length > 0) && (
             <div className="workflow-detail__section">
               <span className="workflow-detail__label">Actions</span>
               <div className="workflow-detail__actions">
-                {data.nextTransitions.map((t) => (
+                {[
+                  ...nextTransitions.map((t) => [t, true]),
+                  ...backTransitions.map((t) => [t, false]),
+                ].map(([t, isForward]) => (
                   <button
                     key={t.id}
                     name={WORKFLOW_FORM_ACTION.UPDATE}
-                    className="workflow-detail__btn workflow-detail__btn--next"
+                    className={`workflow-detail__btn workflow-detail__btn--${transitionVariant(t, isForward)}`}
                     onClick={(e) => handleTransition(e.currentTarget, t.id)}
                     type="button"
                   >
-                    <Icon name="check" /> {t.title}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Back Transitions */}
-          {data.backTransitions && data.backTransitions.length > 0 && (
-            <div className="workflow-detail__section">
-              <div className="workflow-detail__actions">
-                {data.backTransitions.map((t) => (
-                  <button
-                    key={t.id}
-                    name={WORKFLOW_FORM_ACTION.UPDATE}
-                    className="workflow-detail__btn workflow-detail__btn--back"
-                    onClick={(e) => handleTransition(e.currentTarget, t.id)}
-                    type="button"
-                  >
-                    <Icon name="arrow-left" /> {t.title}
+                    {t.title}
                   </button>
                 ))}
               </div>

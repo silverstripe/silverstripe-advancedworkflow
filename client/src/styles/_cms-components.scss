@@ -1,0 +1,179 @@
+@use "cms-tokens" as *;
+
+// ============================================================
+// Silverstripe CMS components
+// Mixins reproducing components from the "Silverstripe CMS" Figma
+// styleguide (Components page). Values come from the component data, not
+// from screenshots, so the workflow UI matches the rest of the CMS.
+// ============================================================
+
+$cms-transition-fast: 0.15s ease;
+
+@mixin wf-focus-ring($offset: rem(2)) {
+  &:focus-visible {
+    outline: rem(2) solid $cms-border-focus;
+    outline-offset: $offset;
+  }
+}
+
+// Body/Default body text.
+@mixin wf-body-text {
+  font-family: $cms-font-family;
+  font-size: $cms-font-size-body;
+  line-height: $cms-line-height-body;
+}
+
+// Extras/Grid list title: the uppercase label above a group of fields.
+@mixin wf-section-label {
+  font-family: $cms-font-family;
+  font-size: rem(12);
+  font-weight: normal;
+  line-height: rem(20);
+  letter-spacing: rem(0.5);
+  text-transform: uppercase;
+  color: $cms-grey-500;
+}
+
+// Shared shape of every CMS button.
+@mixin wf-btn-base {
+  @include wf-body-text;
+
+  display: inline-flex;
+  align-items: center;
+  gap: rem(6);
+  padding: rem(5) rem(10) rem(6);
+  border: rem(1) solid transparent;
+  border-radius: $cms-radius-button;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color $cms-transition-fast, color $cms-transition-fast, border-color $cms-transition-fast;
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  @include wf-focus-ring;
+}
+
+// "Secondary button", type Default: text-only, low-emphasis action.
+@mixin wf-btn-secondary {
+  @include wf-btn-base;
+
+  color: $cms-text-light;
+
+  &:hover:not(:disabled) {
+    background: $cms-bg-secondary-hover;
+    color: $cms-text-default;
+  }
+}
+
+// "Secondary button", type Outline.
+@mixin wf-btn-outline {
+  @include wf-btn-secondary;
+
+  border-color: $cms-border-outline;
+}
+
+// "Secondary button", type Delete: destructive action.
+@mixin wf-btn-danger {
+  @include wf-btn-base;
+
+  color: $cms-text-danger;
+
+  &:hover:not(:disabled) {
+    background: $cms-bg-secondary-hover;
+  }
+}
+
+// "Primary button" without an icon: the main action on a screen.
+@mixin wf-btn-primary {
+  @include wf-btn-base;
+
+  padding: rem(4) rem(16) rem(6);
+  border-color: $cms-btn-primary;
+  background: $cms-btn-primary;
+  color: $cms-white;
+  font-size: rem(15);
+  line-height: rem(22);
+
+  &:hover:not(:disabled) {
+    border-color: $cms-btn-primary-hover;
+    background: $cms-btn-primary-hover;
+    color: $cms-white;
+  }
+}
+
+// "Info Alert" without icon or close button: a coloured band with a 1px
+// rule along its bottom edge.
+@mixin wf-alert($bg, $border, $text) {
+  background: $bg;
+  box-shadow: inset 0 rem(-1) 0 $border;
+  color: $text;
+}
+
+// "Site tree tag": small uppercase status label (Extras/Tag text).
+@mixin wf-tag($bg, $color) {
+  display: inline-flex;
+  align-items: center;
+  gap: rem(3);
+  padding: rem(1) rem(3) rem(2);
+  border-radius: $cms-radius-tag;
+  background: $bg;
+  color: $color;
+  font-size: rem(10);
+  font-weight: normal;
+  line-height: rem(12);
+  letter-spacing: rem(0.4);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+// CMS form control (input/select/textarea).
+@mixin wf-form-control {
+  @include wf-body-text;
+
+  width: 100%;
+  padding: rem(8) rem(12);
+  border: rem(1) solid $cms-border-input;
+  border-radius: $cms-radius;
+  background: $cms-white;
+  color: $cms-text-default;
+  box-sizing: border-box;
+  transition: border-color $cms-transition-fast, box-shadow $cms-transition-fast;
+
+  &::placeholder {
+    color: $cms-grey-400;
+    font-style: italic;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $cms-border-focus;
+    box-shadow: 0 0 0 rem(3) rgba($cms-border-focus, 0.25);
+  }
+
+  &:disabled,
+  &[readonly] {
+    background: $cms-grey-100;
+  }
+}
+
+@mixin wf-icon-button {
+  flex-shrink: 0;
+  padding: rem(4);
+  border: 0;
+  border-radius: $cms-radius-button;
+  background: none;
+  color: $cms-text-light;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color $cms-transition-fast, color $cms-transition-fast;
+
+  &:hover {
+    background: $cms-bg-secondary-hover;
+    color: $cms-text-danger;
+  }
+
+  @include wf-focus-ring(rem(1));
+}

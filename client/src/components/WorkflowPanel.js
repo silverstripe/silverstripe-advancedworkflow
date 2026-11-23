@@ -4,6 +4,7 @@ import WorkflowDetailPanel from './WorkflowDetailPanel';
 import Icon from './Icon';
 import { classifyWorkflowResponse, RESPONSE_NOT_APPLICABLE, RESPONSE_OK } from '../lib/workflowResponse';
 import submitWorkflowAction, { WORKFLOW_FORM_ACTION, WORKFLOW_FORM_FIELD } from '../lib/cmsForm';
+import { TRANSITION_VARIANT } from '../lib/transitionVariant';
 
 const API_BASE = '/workflow-admin';
 
@@ -90,7 +91,7 @@ const WorkflowPanel = ({ recordID, className }) => {
                 <button
                   key={wf.id}
                   name={WORKFLOW_FORM_ACTION.START}
-                  className="workflow-bar__action-btn workflow-bar__action-btn--approve"
+                  className={`workflow-bar__action-btn workflow-bar__action-btn--${TRANSITION_VARIANT.PRIMARY}`}
                   onClick={(e) => handleStartWorkflow(e.currentTarget, wf.id)}
                   type="button"
                 >

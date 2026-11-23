@@ -1,0 +1,670 @@
+@use "cms-tokens" as *;
+@use "cms-components" as *;
+
+// ============================================================
+// Workflow status panel: the bar on the page edit form, the step
+// tracker, the detail drawer and its activity feed. Built from the
+// "Silverstripe CMS" Figma styleguide components and type scale.
+// ============================================================
+
+// The styleguide has no drawer component; this matches the dimming the
+// CMS uses behind its modals.
+$wf-overlay-backdrop: rgba(0, 0, 0, 0.4);
+$wf-drawer-width: rem(380);
+$wf-tracker-dot-size: rem(20);
+$wf-tracker-dot-size-compact: rem(16);
+$wf-transition-normal: 0.25s ease;
+
+// Headings/H5.
+@mixin wf-heading-5 {
+  font-size: rem(13);
+  font-weight: $cms-font-weight-medium;
+  line-height: rem(22);
+}
+
+// Body/Meta data and Body small.
+@mixin wf-meta-text {
+  font-size: rem(11);
+  line-height: rem(20);
+  color: $cms-text-light;
+}
+
+.workflow-panel {
+  @include wf-body-text;
+
+  margin-bottom: rem(16);
+  color: $cms-text-default;
+
+  &--error {
+    @include wf-alert($cms-bg-dark, $cms-border-default, $cms-alert-danger-text);
+
+    padding: rem(12);
+  }
+}
+
+// ------------------------------------------------------------
+// Status bar
+// ------------------------------------------------------------
+.workflow-bar {
+  display: flex;
+  flex-direction: column;
+  gap: rem(8);
+  padding: rem(12);
+  border: rem(1) solid $cms-border-default;
+  border-radius: $cms-radius;
+  background: $cms-bg-dark;
+
+  &--start {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  &--rejected .workflow-bar__status {
+    color: $cms-alert-danger-text;
+  }
+
+  &--complete,
+  &--published {
+    border-color: $cms-alert-success-border;
+    background: $cms-alert-success-bg;
+
+    .workflow-bar__status,
+    .workflow-bar__current,
+    .workflow-bar__restart-hint {
+      color: $cms-alert-success-text;
+    }
+
+    .workflow-bar__actions {
+      border-top-color: $cms-alert-success-border;
+    }
+  }
+
+  &__top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: rem(16);
+    width: 100%;
+  }
+
+  &__left {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: rem(6);
+  }
+
+  &__indicator {
+    display: inline-flex;
+    font-size: rem(18);
+
+    &--info {
+      color: $cms-text-link;
+    }
+
+    &--warning {
+      color: $cms-text-warning;
+    }
+
+    &--modified {
+      color: $cms-text-modified;
+    }
+
+    &--success {
+      color: $cms-text-success;
+    }
+
+    &--danger {
+      color: $cms-text-danger;
+    }
+  }
+
+  &__status {
+    @include wf-heading-5;
+
+    color: $cms-text-default;
+  }
+
+  &__separator {
+    color: $cms-grey-400;
+  }
+
+  &__current {
+    color: $cms-text-light;
+  }
+
+  &__center {
+    display: flex;
+    flex: 1;
+    justify-content: center;
+    min-width: 0;
+    overflow-x: auto;
+  }
+
+  &__right {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: rem(12);
+    margin-left: auto;
+  }
+
+  &__assigned {
+    color: $cms-text-light;
+  }
+
+  &__details-btn {
+    @include wf-btn-outline;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: rem(12);
+    padding-top: rem(8);
+    border-top: rem(1) solid $cms-border-default;
+  }
+
+  &__actions-left {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: rem(8);
+    min-width: 0;
+  }
+
+  &__actions-right {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: rem(8);
+  }
+
+  &__comment-input {
+    @include wf-form-control;
+
+    flex: 1;
+    min-width: rem(160);
+    max-width: rem(320);
+  }
+
+  &__comment-toggle {
+    @include wf-btn-secondary;
+  }
+
+  &__action-btn {
+    &--primary {
+      @include wf-btn-primary;
+    }
+
+    &--danger {
+      @include wf-btn-danger;
+    }
+
+    &--outline {
+      @include wf-btn-outline;
+    }
+  }
+
+  &__restart-hint {
+    color: $cms-text-light;
+  }
+}
+
+// ------------------------------------------------------------
+// Step tracker
+// ------------------------------------------------------------
+.workflow-tracker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: rem(4);
+
+  &--full {
+    .workflow-tracker__step {
+      flex-shrink: 1;
+      min-width: 0;
+    }
+
+    .workflow-tracker__label {
+      overflow: hidden;
+      width: fit-content;
+      max-width: rem(200);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .workflow-tracker__connector {
+      width: rem(16);
+    }
+  }
+
+  &--compact {
+    .workflow-tracker__dot {
+      width: $wf-tracker-dot-size-compact;
+      height: $wf-tracker-dot-size-compact;
+      cursor: help;
+    }
+
+    .workflow-tracker__connector {
+      width: rem(8);
+    }
+  }
+
+  &__step {
+    display: flex;
+    align-items: center;
+    gap: rem(4);
+    white-space: nowrap;
+
+    &--completed .workflow-tracker__dot {
+      background: $cms-text-success;
+      color: $cms-white;
+    }
+
+    &--active .workflow-tracker__dot {
+      background: $cms-text-link;
+      box-shadow: 0 0 0 rem(3) $cms-blue-10;
+      color: $cms-white;
+    }
+
+    &--active .workflow-tracker__label {
+      color: $cms-text-link;
+      font-weight: $cms-font-weight-medium;
+    }
+
+    &--pending .workflow-tracker__dot {
+      border: rem(1) solid $cms-border-default;
+      background: $cms-white;
+      color: $cms-text-light;
+    }
+
+    &--pending .workflow-tracker__label {
+      color: $cms-text-light;
+    }
+
+    &--rejected .workflow-tracker__dot {
+      background: $cms-text-danger;
+      color: $cms-white;
+    }
+
+    &--rejected .workflow-tracker__label {
+      color: $cms-text-danger;
+      font-weight: $cms-font-weight-medium;
+    }
+  }
+
+  &__dot {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: $wf-tracker-dot-size;
+    height: $wf-tracker-dot-size;
+    border-radius: 50%;
+    font-size: rem(10);
+    font-weight: $cms-font-weight-medium;
+    line-height: rem(12);
+    transition: background-color $wf-transition-normal, box-shadow $wf-transition-normal;
+  }
+
+  &__label {
+    color: $cms-text-default;
+    transition: color $cms-transition-fast;
+  }
+
+  &__connector {
+    flex-shrink: 0;
+    width: rem(24);
+    height: rem(2);
+    margin: 0 rem(2);
+
+    &--completed {
+      background: $cms-text-success;
+    }
+
+    &--pending {
+      background: $cms-border-default;
+    }
+  }
+
+  &__count {
+    @include wf-meta-text;
+
+    margin-left: rem(8);
+    white-space: nowrap;
+  }
+}
+
+// ------------------------------------------------------------
+// Detail drawer
+// ------------------------------------------------------------
+@keyframes workflow-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes workflow-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.workflow-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  justify-content: flex-end;
+  background: $wf-overlay-backdrop;
+  animation: workflow-fade-in $wf-transition-normal;
+
+  &__backdrop {
+    position: absolute;
+    inset: 0;
+  }
+}
+
+.workflow-detail {
+  @include wf-body-text;
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: $wf-drawer-width;
+  max-width: 90vw;
+  height: 100%;
+  overflow-y: auto;
+  background: $cms-white;
+  box-shadow: $cms-shadow-l;
+  color: $cms-text-default;
+  animation: workflow-slide-in $wf-transition-normal;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: rem(14) rem(20);
+    border-bottom: rem(1) solid $cms-border-default;
+    background: $cms-bg-dark;
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: rem(8);
+
+    // Headings/H3.
+    h3 {
+      margin: 0;
+      color: $cms-text-default;
+      font-size: rem(16);
+      font-weight: $cms-font-weight-medium;
+      line-height: rem(22);
+    }
+  }
+
+  &__indicator {
+    display: inline-flex;
+    color: $cms-text-warning;
+    font-size: rem(12);
+
+    &--rejected {
+      color: $cms-text-danger;
+    }
+  }
+
+  &__close {
+    @include wf-icon-button;
+
+    font-size: rem(18);
+
+    &:hover {
+      color: $cms-text-default;
+    }
+  }
+
+  &__body {
+    flex: 1;
+    padding: rem(20);
+  }
+
+  &__section {
+    margin-bottom: rem(20);
+  }
+
+  &__notice {
+    padding: rem(12);
+
+    p {
+      margin: rem(4) 0 0;
+    }
+
+    &--complete {
+      @include wf-alert($cms-alert-success-bg, $cms-alert-success-border, $cms-alert-success-text);
+    }
+
+    &--rejected {
+      @include wf-alert($cms-bg-dark, $cms-border-default, $cms-alert-danger-text);
+    }
+  }
+
+  &__label {
+    @include wf-section-label;
+
+    display: block;
+    margin-bottom: rem(4);
+  }
+
+  &__value {
+    color: $cms-text-default;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: rem(8);
+  }
+
+  &__btn {
+    &--primary {
+      @include wf-btn-primary;
+    }
+
+    &--danger {
+      @include wf-btn-danger;
+    }
+
+    &--outline {
+      @include wf-btn-outline;
+    }
+  }
+
+  &__textarea {
+    @include wf-form-control;
+
+    min-height: rem(72);
+    resize: vertical;
+  }
+
+  &__feedback {
+    padding: rem(12);
+    border-left: rem(3) solid $cms-text-link;
+    border-radius: $cms-radius;
+    background: $cms-bg-dark;
+  }
+
+  &__feedback-text {
+    margin: 0 0 rem(4);
+    font-style: italic;
+  }
+
+  &__feedback-meta {
+    @include wf-meta-text;
+
+    display: block;
+  }
+}
+
+// ------------------------------------------------------------
+// Activity feed (inside the drawer)
+// ------------------------------------------------------------
+.workflow-activity {
+  &__empty {
+    color: $cms-text-light;
+    font-style: italic;
+  }
+
+  &__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    border-bottom: rem(1) solid $cms-border-light;
+
+    &:last-child {
+      border-bottom: 0;
+    }
+
+    &--expanded {
+      margin-bottom: rem(4);
+      border-radius: $cms-radius;
+      background: $cms-bg-dark;
+    }
+
+    &--has-comment {
+      border-left: rem(3) solid $cms-text-link;
+    }
+
+    &--rejection {
+      .workflow-activity__title,
+      .workflow-activity__icon {
+        color: $cms-text-danger;
+      }
+    }
+
+    &--rejection.workflow-activity__item--has-comment {
+      border-left-color: $cms-text-danger;
+    }
+  }
+
+  &__toggle {
+    @include wf-body-text;
+
+    display: flex;
+    align-items: flex-start;
+    gap: rem(8);
+    width: 100%;
+    padding: rem(8) rem(6);
+    border: 0;
+    border-radius: $cms-radius;
+    background: none;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color $cms-transition-fast;
+
+    &:hover {
+      background: $cms-bg-secondary-hover;
+    }
+
+    @include wf-focus-ring(rem(1));
+  }
+
+  &__icon {
+    flex-shrink: 0;
+    width: rem(20);
+    color: $cms-text-light;
+    font-size: rem(16);
+    line-height: rem(20);
+    text-align: center;
+  }
+
+  &__summary {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: rem(2);
+    min-width: 0;
+  }
+
+  &__title {
+    overflow: hidden;
+    color: $cms-text-default;
+    font-weight: $cms-font-weight-medium;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__comment-hint {
+    margin-left: rem(2);
+    font-size: rem(11);
+  }
+
+  &__author {
+    font-weight: $cms-font-weight-medium;
+  }
+
+  &__meta {
+    @include wf-meta-text;
+
+    display: flex;
+    align-items: center;
+    gap: rem(6);
+  }
+
+  &__type-badge {
+    @include wf-tag($cms-blue-02, $cms-blue-75);
+  }
+
+  &__time {
+    cursor: help;
+  }
+
+  &__chevron {
+    flex-shrink: 0;
+    color: $cms-text-light;
+    font-size: rem(12);
+    line-height: rem(20);
+  }
+
+  &__details {
+    padding: rem(6) rem(6) rem(10) rem(34);
+    border-top: rem(1) solid $cms-border-light;
+  }
+
+  &__detail-row {
+    display: flex;
+    align-items: baseline;
+    gap: rem(8);
+    padding: rem(4) 0;
+  }
+
+  &__detail-label {
+    @include wf-section-label;
+
+    flex-shrink: 0;
+    min-width: rem(64);
+  }
+
+  &__detail-comment {
+    margin: 0;
+    padding: rem(6) rem(8);
+    border: rem(1) solid $cms-border-default;
+    border-radius: $cms-radius;
+    background: $cms-white;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  &__detail-empty {
+    @include wf-meta-text;
+
+    margin: rem(4) 0 0;
+    font-style: italic;
+  }
+}
