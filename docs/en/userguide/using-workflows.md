@@ -34,6 +34,8 @@ the workflow buttons at the bottom of the editing pane, and you start, approve a
 
 The panel shows where the page is in its workflow:
 
+![The workflow status panel waiting for approval](_images/advancedworkflow-status-panel.png)
+
 - **In Progress**: the workflow is moving to its next step.
 - **Awaiting approval**: the workflow is waiting for someone to approve or reject the page.
 - **Complete**: the workflow approved the page, and it is ready to publish.
@@ -42,6 +44,8 @@ The panel shows where the page is in its workflow:
 
 The step tracker shows each stage of the workflow, with completed stages, the current stage and the stages still to
 come. The panel also shows who the workflow is assigned to.
+
+![The workflow status panel once the workflow is complete](_images/advancedworkflow-status-panel-complete.png)
 
 ### Starting, approving and rejecting
 
@@ -57,6 +61,8 @@ Any unsaved changes to the page are saved before the workflow moves on.
 Select *View Details* to see who the workflow is assigned to, its progress, the latest feedback and recent activity.
 *View Details* is only shown to users who can view the workflow, such as the people assigned to it and the person who
 started it.
+
+![The workflow details drawer](_images/advancedworkflow-status-panel-details.png)
 
 ### Publishing after approval
 

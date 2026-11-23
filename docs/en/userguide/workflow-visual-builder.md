@@ -24,6 +24,8 @@ save the workflow until it has loaded.
 Each review stage assigns reviewers, notifies them, and then waits for them to approve or reject the content. Approved
 content moves on to the next stage. Rejected content follows the rejection path.
 
+![A review stage in the visual builder](_images/advancedworkflow-visual-builder-stage.png)
+
 - To start a new workflow, select *Add your first review stage*. The builder creates the standard steps for the stage
   and a rejection path, all connected for you.
 - To add another stage, select *Add a review stage*. You can also add a stage between two existing stages.
@@ -46,6 +48,8 @@ Select any step to see its settings on the right. Depending on the type of step,
 - the notification email's subject, sender and message
 - whether reviewers can edit or comment on the content
 - what happens after the step (where approval and rejection lead)
+
+![Settings for an "assign reviewers" step](_images/advancedworkflow-visual-builder-step.png)
 
 Steps that belong to a review stage are connected automatically, so you add and remove them from the stage card rather
 than from the step's settings.
