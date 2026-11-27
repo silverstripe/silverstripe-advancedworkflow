@@ -6,6 +6,7 @@ namespace Symbiote\AdvancedWorkflow\Tests\Services;
 
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
+use SilverStripe\ORM\Queries\SQLDelete;
 use Symbiote\AdvancedWorkflow\Actions\CancelWorkflowAction;
 use Symbiote\AdvancedWorkflow\Actions\SimpleApprovalWorkflowAction;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowAction;
@@ -146,6 +147,29 @@ class WorkflowApprovalServiceTest extends SapphireTest
         $this->runReview(WorkflowApprovalServiceTest::APPROVE);
         $this->runReview(WorkflowApprovalServiceTest::REJECT);
 
+        $this->assertFalse($this->service->isCurrentContentApproved($this->reloadPage()));
+    }
+
+    public function testLatestWorkflowIsLookedUpOncePerRecord(): void
+    {
+        $this->runReview(WorkflowApprovalServiceTest::APPROVE);
+        $page = $this->reloadPage();
+        $this->assertTrue($this->service->isCurrentContentApproved($page));
+
+        // Removed without the ORM, so only a reset shows the change
+        SQLDelete::create('"WorkflowInstance"')->execute();
+        $this->assertTrue($this->service->isCurrentContentApproved($page));
+
+        WorkflowApprovalService::reset();
+        $this->assertFalse($this->service->isCurrentContentApproved($page));
+    }
+
+    public function testCompletingAnotherWorkflowUpdatesApproval(): void
+    {
+        $this->runReview(WorkflowApprovalServiceTest::APPROVE);
+        $this->assertTrue($this->service->isCurrentContentApproved($this->reloadPage()));
+
+        $this->runReview(WorkflowApprovalServiceTest::REJECT);
         $this->assertFalse($this->service->isCurrentContentApproved($this->reloadPage()));
     }
 

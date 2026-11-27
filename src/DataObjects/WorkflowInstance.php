@@ -211,6 +211,18 @@ class WorkflowInstance extends DataObject
         }
     }
 
+    protected function onAfterWrite()
+    {
+        parent::onAfterWrite();
+        WorkflowApprovalService::reset();
+    }
+
+    protected function onAfterDelete()
+    {
+        parent::onAfterDelete();
+        WorkflowApprovalService::reset();
+    }
+
     /**
      * Update the current state of the workflow
      *

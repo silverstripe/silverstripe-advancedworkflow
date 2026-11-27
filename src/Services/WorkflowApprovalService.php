@@ -6,6 +6,7 @@ namespace Symbiote\AdvancedWorkflow\Services;
 
 use SilverStripe\Core\ClassInfo;
 use SilverStripe\Core\Injector\Injectable;
+use SilverStripe\Core\Resettable;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Versioned\Versioned;
 use Symbiote\AdvancedWorkflow\Actions\CancelWorkflowAction;
@@ -22,11 +23,29 @@ use Symbiote\AdvancedWorkflow\Enum\WorkflowOutcome;
  * stored when the workflow completes; any later edit, addition or removal of
  * owned content changes the signature and so needs a new approval.
  */
-class WorkflowApprovalService
+class WorkflowApprovalService implements Resettable
 {
     use Injectable;
 
     private const SIGNATURE_ALGORITHM = 'sha256';
+
+    /**
+     * Most recent completed workflow of each record, keyed by base class and ID.
+     * Building an edit form checks canPublish() several times, and each check
+     * would otherwise look the workflow up again. Writing or deleting any
+     * workflow instance clears it.
+     *
+     * @var array<string, WorkflowInstance|null>
+     */
+    protected static array $latestCompletedWorkflows = [];
+
+    /**
+     * Forget the completed workflows looked up so far.
+     */
+    public static function reset(): void
+    {
+        WorkflowApprovalService::$latestCompletedWorkflows = [];
+    }
 
     /**
      * Store the outcome and content signature on a workflow that has just
@@ -64,14 +83,7 @@ class WorkflowApprovalService
             return false;
         }
 
-        $latest = WorkflowInstance::get()
-            ->filter([
-                'TargetClass' => array_values(ClassInfo::ancestry($record->ClassName)),
-                'TargetID' => $record->ID,
-                'WorkflowStatus' => WorkflowInstance::STATUS_COMPLETE,
-            ])
-            ->sort('ID', 'DESC')
-            ->first();
+        $latest = $this->getLatestCompletedWorkflow($record);
 
         if (!$latest instanceof WorkflowInstance || $this->getOutcome($latest) !== WorkflowOutcome::Approved) {
             return false;
@@ -80,6 +92,24 @@ class WorkflowApprovalService
         $signature = (string)$latest->ContentSignature;
 
         return $signature !== '' && hash_equals($signature, $this->contentSignature($record));
+    }
+
+    private function getLatestCompletedWorkflow(DataObject $record): ?WorkflowInstance
+    {
+        $key = $record->baseClass() . '#' . $record->ID;
+
+        if (!array_key_exists($key, WorkflowApprovalService::$latestCompletedWorkflows)) {
+            WorkflowApprovalService::$latestCompletedWorkflows[$key] = WorkflowInstance::get()
+                ->filter([
+                    'TargetClass' => array_values(ClassInfo::ancestry($record->ClassName)),
+                    'TargetID' => $record->ID,
+                    'WorkflowStatus' => WorkflowInstance::STATUS_COMPLETE,
+                ])
+                ->sort('ID', 'DESC')
+                ->first();
+        }
+
+        return WorkflowApprovalService::$latestCompletedWorkflows[$key];
     }
 
     /**
