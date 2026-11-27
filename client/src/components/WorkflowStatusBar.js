@@ -1,0 +1,214 @@
+import React, { useState } from 'react';
+import i18n from 'i18n';
+import StepTracker from './StepTracker';
+import Icon from './Icon';
+import { WORKFLOW_FORM_ACTION } from '../lib/cmsForm';
+import { transitionVariant, TRANSITION_VARIANT } from '../lib/transitionVariant';
+
+const WORKFLOW_STATUS = Object.freeze({
+  ACTIVE: 'Active',
+  PAUSED: 'Paused',
+  COMPLETE: 'Complete',
+  CANCELLED: 'Cancelled',
+});
+
+// Tones map to `workflow-bar__indicator--<tone>` colour modifiers.
+const TONE = Object.freeze({
+  WARNING: 'warning',
+  MODIFIED: 'modified',
+  SUCCESS: 'success',
+  DANGER: 'danger',
+});
+
+const statusIndicator = (workflowStatus) => {
+  const indicators = {
+    [WORKFLOW_STATUS.ACTIVE]: {
+      tone: TONE.WARNING, icon: 'dot', label: i18n._t('WorkflowPanel.STATUS_ACTIVE', 'In Progress'),
+    },
+    [WORKFLOW_STATUS.PAUSED]: {
+      tone: TONE.MODIFIED, icon: 'approval', label: i18n._t('WorkflowPanel.STATUS_PAUSED', 'Awaiting approval'),
+    },
+    [WORKFLOW_STATUS.COMPLETE]: {
+      tone: TONE.SUCCESS, icon: 'check', label: i18n._t('WorkflowPanel.STATUS_COMPLETE', 'Complete'),
+    },
+    [WORKFLOW_STATUS.CANCELLED]: {
+      tone: TONE.DANGER, icon: 'cross', label: i18n._t('WorkflowPanel.STATUS_CANCELLED', 'Cancelled'),
+    },
+  };
+
+  return indicators[workflowStatus] || indicators[WORKFLOW_STATUS.ACTIVE];
+};
+
+const isRejected = (data) => data?.isRejected === true;
+const isPublished = (data) => data?.isPublished === true;
+
+const WorkflowStatusBar = ({ data, onViewDetails, onTransition, onStartWorkflow }) => {
+  const [comment, setComment] = useState('');
+  const [showComment, setShowComment] = useState(false);
+
+  if (!data || !data.instanceId) return null;
+
+  const status = statusIndicator(data.workflowStatus);
+  const rejected = isRejected(data);
+  const published = isPublished(data);
+  const isFinished = data.workflowStatus === WORKFLOW_STATUS.COMPLETE
+    || data.workflowStatus === WORKFLOW_STATUS.CANCELLED;
+
+  let barModifier = '';
+  if (rejected) {
+    barModifier = 'workflow-bar--rejected';
+  } else if (published) {
+    barModifier = 'workflow-bar--published';
+  } else if (isFinished) {
+    barModifier = 'workflow-bar--complete';
+  }
+
+  let statusLabel = status.label;
+  let statusIcon = status.icon;
+  let statusTone = status.tone;
+
+  if (rejected) {
+    statusLabel = i18n._t('WorkflowPanel.REJECTED', 'Rejected');
+    statusIcon = 'cross';
+    statusTone = TONE.DANGER;
+  } else if (published) {
+    statusLabel = i18n._t('WorkflowPanel.PUBLISHED', 'Published');
+    statusIcon = 'check';
+    statusTone = TONE.SUCCESS;
+  }
+
+  const nextTransitions = data.nextTransitions || [];
+  const backTransitions = data.backTransitions || [];
+  const availableWorkflows = data.availableWorkflows || [];
+  const hasActions = !isFinished && (nextTransitions.length > 0 || backTransitions.length > 0);
+  const allowCommenting = data.allowCommenting === true;
+
+  const handleAction = (button, transitionId) => {
+    if (onTransition) {
+      onTransition(button, transitionId, comment);
+    }
+  };
+
+  return (
+    <div className={`workflow-bar ${barModifier}`} role="status" aria-label={i18n._t('WorkflowPanel.STATUS_LABEL', 'Workflow status')}>
+      {/* Top row: status + progress + details */}
+      <div className="workflow-bar__top">
+        <div className="workflow-bar__left">
+          <span
+            className={`workflow-bar__indicator workflow-bar__indicator--${statusTone}`}
+            aria-hidden="true"
+          >
+            <Icon name={statusIcon} />
+          </span>
+          <span className="workflow-bar__status">
+            {statusLabel}
+          </span>
+          {data.current && !published && (
+            <>
+              <span className="workflow-bar__separator" aria-hidden="true">•</span>
+              <span className="workflow-bar__current">{data.current}</span>
+            </>
+          )}
+        </div>
+
+        <div className="workflow-bar__center">
+          <StepTracker
+            steps={data.steps || []}
+            currentIndex={data.currentIndex || 0}
+            compact={false}
+            isRejected={rejected}
+          />
+        </div>
+
+        <div className="workflow-bar__right">
+          {data.assignedTo && (
+            <span className="workflow-bar__assigned">
+              {i18n._t('WorkflowPanel.ASSIGNED', 'Assigned:')} <strong>{data.assignedTo}</strong>
+            </span>
+          )}
+          {data.canViewDetails && (
+            <button
+              className="workflow-bar__details-btn"
+              onClick={onViewDetails}
+              type="button"
+              aria-label={i18n._t('WorkflowPanel.VIEW_DETAILS_LABEL', 'View workflow details')}
+            >
+              {i18n._t('WorkflowPanel.VIEW_DETAILS', 'View Details')}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Action row: transition buttons below progress */}
+      {hasActions && (
+        <div className="workflow-bar__actions">
+          <div className="workflow-bar__actions-left">
+            {allowCommenting && showComment && (
+              <input
+                className="workflow-bar__comment-input"
+                type="text"
+                placeholder={i18n._t('WorkflowPanel.COMMENT_OPTIONAL', 'Add a comment (optional)…')}
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                aria-label={i18n._t('WorkflowPanel.COMMENT_LABEL', 'Workflow comment')}
+              />
+            )}
+            {allowCommenting && !showComment && (
+              <button
+                className="workflow-bar__comment-toggle"
+                onClick={() => setShowComment(true)}
+                type="button"
+                title={i18n._t('WorkflowPanel.COMMENT_HINT', 'Add comment before action')}
+              >
+                <Icon name="comment" /> {i18n._t('WorkflowPanel.COMMENT', 'Comment')}
+              </button>
+            )}
+          </div>
+
+          <div className="workflow-bar__actions-right">
+            {[
+              ...nextTransitions.map((t) => [t, true]),
+              ...backTransitions.map((t) => [t, false]),
+            ].map(([t, isForward]) => (
+              <button
+                key={t.id}
+                name={WORKFLOW_FORM_ACTION.UPDATE}
+                className={`workflow-bar__action-btn workflow-bar__action-btn--${transitionVariant(t, isForward)}`}
+                onClick={(e) => handleAction(e.currentTarget, t.id)}
+                type="button"
+              >
+                {t.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Restart workflow when finished */}
+      {isFinished && availableWorkflows.length > 0 && (
+        <div className="workflow-bar__actions">
+          <div className="workflow-bar__actions-left">
+            <span className="workflow-bar__restart-hint">
+              {i18n._t('WorkflowPanel.RESTART_HINT', 'Content edited? Start a new approval cycle:')}
+            </span>
+          </div>
+          <div className="workflow-bar__actions-right">
+            {availableWorkflows.map((wf) => (
+              <button
+                key={wf.id}
+                name={WORKFLOW_FORM_ACTION.START}
+                className={`workflow-bar__action-btn workflow-bar__action-btn--${TRANSITION_VARIANT.PRIMARY}`}
+                onClick={(e) => onStartWorkflow && onStartWorkflow(e.currentTarget, wf.id)}
+                type="button"
+              >
+                {wf.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default WorkflowStatusBar;

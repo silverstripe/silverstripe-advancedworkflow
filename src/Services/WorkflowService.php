@@ -3,7 +3,9 @@
 namespace Symbiote\AdvancedWorkflow\Services;
 
 use Exception;
+use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\ClassInfo;
+use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Convert;
 use SilverStripe\Model\List\ArrayList;
 use SilverStripe\ORM\DataList;
@@ -30,12 +32,35 @@ use Symbiote\AdvancedWorkflow\DataObjects\WorkflowTransition;
 
 class WorkflowService implements PermissionProvider
 {
+    use Configurable;
+
+    /**
+     * Replace the workflow buttons in the page edit form's action bar with the
+     * workflow status panel, and allow publishing once a workflow has approved
+     * the current version of a record.
+     */
+    private static bool $enable_workflow_panel = false;
+
     /**
      * An array of templates that we can create from
      *
      * @var array
      */
     protected $templates;
+
+    public function isWorkflowPanelEnabled(): bool
+    {
+        return (bool)static::config()->get('enable_workflow_panel');
+    }
+
+    /**
+     * The status panel is mounted in the page edit form only; records edited
+     * elsewhere (GridField, ModelAdmin) keep the action bar buttons.
+     */
+    public function rendersWorkflowPanelFor(DataObject $record): bool
+    {
+        return $this->isWorkflowPanelEnabled() && $record instanceof SiteTree;
+    }
 
     /**
      * Set the list of templates that can be created
@@ -91,7 +116,12 @@ class WorkflowService implements PermissionProvider
             || $dataObject->hasExtension(FileWorkflowApplicable::class)
         ) {
             if ($dataObject->WorkflowDefinitionID) {
-                return WorkflowDefinition::get()->setUseCache(true)->byID($dataObject->WorkflowDefinitionID);
+                $definition = WorkflowDefinition::get()->setUseCache(true)->byID($dataObject->WorkflowDefinitionID);
+
+                if ($definition) {
+                    return $definition;
+                }
+                // Definition was deleted — fall through to parent inheritance
             }
             if ($dataObject->hasMethod('useInheritedWorkflow') && !$dataObject->useInheritedWorkflow()) {
                 return null;

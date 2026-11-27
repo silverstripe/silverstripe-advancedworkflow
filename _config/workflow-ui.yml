@@ -1,0 +1,19 @@
+---
+Name: workflow-ui
+After:
+  - 'workflowconfig'
+---
+SilverStripe\CMS\Controllers\CMSMain:
+  extensions:
+    - Symbiote\AdvancedWorkflow\Extensions\WorkflowUIExtension
+
+Symbiote\AdvancedWorkflow\DataObjects\WorkflowDefinition:
+  extensions:
+    - Symbiote\AdvancedWorkflow\Extensions\WorkflowDefinitionBuilderExtension
+
+SilverStripe\Admin\LeftAndMain:
+  extra_requirements_css:
+    - 'symbiote/silverstripe-advancedworkflow:client/dist/styles/workflow-ui.css'
+  extra_requirements_javascript:
+    - 'symbiote/silverstripe-advancedworkflow:client/dist/js/workflow-ui.js'
+

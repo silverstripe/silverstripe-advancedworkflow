@@ -1,0 +1,837 @@
+@use "sass:color";
+@use "cms-tokens" as *;
+@use "cms-components" as *;
+@use "workflow-panel";
+
+// ============================================================
+// Workflow UI Styles
+// BEM naming convention throughout
+// Uses rem units per coding standards
+// ============================================================
+
+// Variables (mapped onto the Silverstripe CMS design tokens)
+$color-primary: $cms-text-link;
+$color-success: $cms-text-success;
+$color-danger: $cms-text-danger;
+$color-warning: $cms-text-warning;
+$color-muted: $cms-text-light;
+$color-bg: $cms-white;
+$color-bg-light: $cms-bg-dark;
+$color-border: $cms-border-default;
+$color-text: $cms-text-default;
+$color-text-light: $cms-text-light;
+$font-stack: $cms-font-family;
+$radius-sm: $cms-radius;
+$radius-md: $cms-radius;
+$radius-lg: $cms-radius;
+$radius-pill: 1.25rem;
+$shadow-sm: $cms-shadow-xs;
+$shadow-md: $cms-shadow-s;
+$shadow-lg: $cms-shadow-l;
+$transition-fast: $cms-transition-fast;
+$transition-normal: 0.25s ease;
+
+// ============================================================
+// Icon (inline SVG, inherits font-size and color)
+// ============================================================
+.wf-icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  flex-shrink: 0;
+}
+
+// ============================================================
+// Workflow Builder (column layout: stage flow + content area)
+// Styled after the Silverstripe CMS styleguide: CMS buttons, form
+// fields and tags, with each stage's steps drawn as a decision-tree
+// branch (elbow connectors from the stage number down to each step).
+// ============================================================
+
+// Horizontal space between the tree trunk and a step card; matches the
+// elbow width of the CMS decision-tree component.
+$wf-tree-elbow: rem(16);
+// Where the elbow meets a step card, measured from the card's top edge.
+$wf-tree-join: rem(20);
+$wf-tree-gap: rem(8);
+$wf-stage-num-size: rem(22);
+$wf-substep-icon-size: rem(16);
+$wf-substep-gap: rem(10);
+$wf-stage-padding-x: rem(12);
+// Places the trunk directly under the centre of the stage number.
+$wf-tree-trunk-x: $wf-stage-padding-x + $wf-stage-num-size * 0.5;
+
+// CMS "Decision tree item" card.
+@mixin wf-tree-node {
+  display: flex;
+  align-items: center;
+  gap: $wf-substep-gap;
+  padding: rem(7) rem(12) rem(8);
+  border: rem(1) solid $cms-tree-line;
+  border-radius: $cms-radius;
+  background: $cms-white;
+  cursor: pointer;
+  transition: background-color $transition-fast, border-color $transition-fast;
+
+  &:hover {
+    border-color: $cms-blue-500;
+    background: $cms-blue-02;
+  }
+
+  @include wf-focus-ring(rem(1));
+}
+
+@mixin wf-tree-node-selected {
+  border-color: $cms-blue-500;
+  background: $cms-blue-10;
+
+  &:hover {
+    background: $cms-blue-10;
+  }
+}
+
+
+.wf-builder {
+  @include wf-body-text;
+
+  color: $cms-text-default;
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: rem(12);
+    padding-bottom: rem(16);
+    margin-bottom: rem(20);
+    border-bottom: rem(1) solid $cms-border-default;
+  }
+
+  &__heading {
+    font-size: rem(18);
+    font-weight: $cms-font-weight-medium;
+    line-height: rem(22);
+    color: $cms-text-default;
+  }
+
+  &__intro {
+    max-width: rem(720);
+    margin: rem(6) 0 0;
+    color: $cms-text-light;
+
+    strong {
+      font-weight: $cms-font-weight-medium;
+      color: $cms-text-default;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: rem(12);
+    flex-shrink: 0;
+  }
+
+  &__msg {
+    color: $cms-text-success;
+
+    &--error {
+      color: $cms-text-danger;
+    }
+  }
+
+  // Default action button: CMS "Secondary button – Outline".
+  &__btn {
+    @include wf-btn-secondary;
+
+    border-color: $cms-border-outline;
+
+    // The one primary action on the screen: CMS "Primary button".
+    &--save {
+      padding: rem(4) rem(16) rem(6);
+      border-color: $cms-btn-primary;
+      background: $cms-btn-primary;
+      color: $cms-white;
+      font-size: rem(15);
+      line-height: rem(22);
+
+      &:hover:not(:disabled) {
+        border-color: $cms-btn-primary-hover;
+        background: $cms-btn-primary-hover;
+        color: $cms-white;
+      }
+    }
+
+    // CMS "Secondary button – Delete".
+    &--delete {
+      border-color: transparent;
+      color: $cms-text-danger;
+
+      &:hover:not(:disabled) {
+        color: $cms-text-danger;
+      }
+    }
+  }
+
+  // Column layout — flow list on the left, step editor on the right.
+  // Stacks vertically when the CMS edit form is narrow so neither column
+  // gets squeezed.
+  &__columns {
+    display: flex;
+    gap: rem(20);
+    min-height: rem(400);
+
+    @media (width <= 34rem) {
+      flex-direction: column;
+    }
+  }
+
+  // Left column — a vertical flow of stage cards.
+  &__flow {
+    flex: 0 0 rem(400);
+    width: rem(400);
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: rem(8);
+
+    @media (width <= 34rem) {
+      flex-basis: auto;
+      width: 100%;
+    }
+  }
+
+  // Shown in place of the columns while the definition loads, or when it
+  // could not be loaded.
+  &__status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: rem(12);
+    padding: rem(16) rem(20);
+    border-radius: $cms-radius;
+
+    @include wf-body-text;
+
+    &--error {
+      @include wf-alert($cms-bg-dark, $cms-border-default, $cms-alert-danger-text);
+    }
+  }
+
+  &__flow-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: rem(12);
+    padding: rem(20);
+    border: rem(1) dashed $cms-border-dark;
+    border-radius: $cms-radius;
+    background: $cms-bg-default;
+  }
+
+  &__flow-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: rem(8);
+    margin: rem(4) 0 rem(8);
+  }
+
+  // A stage card groups the steps leading up to (and including) an
+  // approval gate, or a publish outcome.
+  &__stage {
+    border: rem(1) solid $cms-border-default;
+    border-radius: $cms-radius;
+    background: $cms-white;
+    box-shadow: $cms-shadow-xs;
+    overflow: hidden;
+  }
+
+  &__stage-head {
+    display: flex;
+    align-items: flex-start;
+    gap: rem(10);
+    padding: rem(10) $wf-stage-padding-x;
+    background: $cms-bg-dark;
+    border-bottom: rem(1) solid $cms-border-light;
+  }
+
+  &__stage-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: $wf-stage-num-size;
+    height: $wf-stage-num-size;
+    margin-top: rem(1);
+    border-radius: 50%;
+    background: $cms-blue-10;
+    color: $cms-blue-75;
+    font-size: rem(12);
+    font-weight: $cms-font-weight-medium;
+    line-height: 1;
+  }
+
+  &__stage--publish &__stage-num {
+    background: $cms-alert-success-bg;
+    color: $cms-alert-success-text;
+  }
+
+  &__stage-heading {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__stage-title {
+    display: block;
+    font-size: rem(14);
+    font-weight: $cms-font-weight-medium;
+    line-height: rem(22);
+    color: $cms-text-default;
+  }
+
+  &__stage-sub {
+    display: block;
+    color: $cms-text-light;
+  }
+
+  &__stage-remove {
+    @include wf-icon-button;
+  }
+
+  // Steps hang off a vertical trunk that starts under the stage number.
+  &__stage-steps {
+    padding: 0 $wf-stage-padding-x rem(12) $wf-tree-trunk-x;
+  }
+
+  // A single step inside a stage (assign, notify, or the gate itself).
+  &__substep {
+    @include wf-tree-node;
+
+    position: relative;
+    margin: $wf-tree-gap 0 0 $wf-tree-elbow;
+
+    // Elbow connector from the trunk into this card.
+    &:before {
+      content: "";
+      position: absolute;
+      top: -$wf-tree-gap - rem(1);
+      left: -$wf-tree-elbow - rem(1);
+      width: $wf-tree-elbow;
+      height: $wf-tree-gap + $wf-tree-join;
+      border-left: rem(1) solid $cms-tree-line;
+      border-bottom: rem(1) solid $cms-tree-line;
+      pointer-events: none;
+    }
+
+    // Trunk continues past this card down to the next sibling.
+    &:not(:last-child):after {
+      content: "";
+      position: absolute;
+      top: -$wf-tree-gap - rem(1);
+      bottom: rem(-1);
+      left: -$wf-tree-elbow - rem(1);
+      border-left: rem(1) solid $cms-tree-line;
+      pointer-events: none;
+    }
+
+    &--selected {
+      @include wf-tree-node-selected;
+    }
+
+    // The gate's status tag sits on its own row under the text, as tags do
+    // on CMS decision-tree items.
+    &--gate {
+      flex-wrap: wrap;
+      row-gap: rem(4);
+
+      .wf-builder__substep-info {
+        flex-basis: calc(100% - #{$wf-substep-icon-size + $wf-substep-gap});
+      }
+
+      .wf-builder__gate-badge {
+        margin-left: $wf-substep-icon-size + $wf-substep-gap;
+      }
+    }
+  }
+
+  &__substep-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    width: $wf-substep-icon-size;
+    font-size: $wf-substep-icon-size;
+    color: $cms-text-light;
+  }
+
+  &__substep-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__substep-title {
+    display: block;
+    color: $cms-text-dark;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__substep-role {
+    display: block;
+    font-size: rem(12);
+    line-height: rem(16);
+    color: $cms-text-light;
+  }
+
+  &__substep-remove {
+    @include wf-icon-button;
+  }
+
+  // "Waits for a decision": CMS site-tree tag in the draft/modified palette.
+  &__gate-badge {
+    @include wf-tag($cms-bg-modified, $cms-text-modified);
+
+    flex-shrink: 0;
+
+    .wf-icon {
+      font-size: rem(10);
+    }
+  }
+
+  &__stage-addons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: rem(4);
+    padding: 0 $wf-stage-padding-x rem(10) ($wf-tree-trunk-x + $wf-tree-elbow);
+  }
+
+  &__addons-label {
+    color: $cms-text-light;
+  }
+
+  &__addon-chip {
+    @include wf-btn-secondary;
+
+    padding: rem(2) rem(8);
+    color: $cms-text-link;
+
+    &:hover:not(:disabled) {
+      color: $cms-text-link-hover;
+    }
+
+    &--advanced {
+      color: $cms-text-light;
+    }
+  }
+
+  &__stage-branches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: rem(2) rem(16);
+    padding: rem(8) $wf-stage-padding-x;
+    border-top: rem(1) solid $cms-border-light;
+    background: $cms-bg-default;
+  }
+
+  &__branch {
+    display: inline-flex;
+    align-items: center;
+    gap: rem(4);
+    color: $cms-text-light;
+
+    strong {
+      font-weight: $cms-font-weight-medium;
+      color: $cms-text-default;
+    }
+
+    &--approve .wf-icon {
+      color: $cms-text-success;
+    }
+
+    &--reject .wf-icon {
+      color: $cms-text-danger;
+    }
+  }
+
+  // Insert-a-stage affordance between (and around) stage cards.
+  &__insert {
+    display: flex;
+    justify-content: center;
+  }
+
+  &__insert-btn {
+    @include wf-btn-secondary;
+
+    padding: rem(2) rem(8);
+  }
+
+  // When approved / Rejection path / Other steps: CMS alert-style panels
+  // with a coloured leading edge.
+  &__section {
+    margin-top: rem(12);
+    padding: rem(12);
+    border: rem(1) solid $cms-border-default;
+    border-left-width: rem(4);
+    border-radius: $cms-radius;
+    background: $cms-white;
+
+    &--approved {
+      border-left-color: $cms-text-success;
+    }
+
+    &--reject {
+      border-left-color: $cms-text-danger;
+    }
+
+    &--other {
+      border-left-color: $cms-grey-400;
+      background: $cms-bg-default;
+    }
+  }
+
+  &__section-label {
+    font-size: rem(12);
+    line-height: rem(20);
+    letter-spacing: rem(0.5);
+    text-transform: uppercase;
+    color: $cms-text-light;
+  }
+
+  &__section--approved &__section-label {
+    color: $cms-alert-success-text;
+  }
+
+  &__section--reject &__section-label {
+    color: $cms-alert-danger-text;
+  }
+
+  &__section-help {
+    margin: rem(2) 0 rem(10);
+    color: $cms-text-light;
+  }
+
+  &__raw-step {
+    @include wf-tree-node;
+
+    margin-bottom: rem(6);
+
+    &--selected {
+      @include wf-tree-node-selected;
+    }
+  }
+
+  &__advanced-add {
+    margin-top: rem(8);
+
+    summary {
+      color: $cms-text-link;
+      cursor: pointer;
+
+      &:hover {
+        color: $cms-text-link-hover;
+        text-decoration: underline;
+      }
+
+      @include wf-focus-ring(rem(1));
+    }
+
+    .wf-builder__addon-chip {
+      margin: rem(8) rem(4) 0 0;
+    }
+  }
+
+  // Right content area
+  &__content {
+    flex: 1;
+    min-width: 0;
+    border: rem(1) solid $cms-border-default;
+    border-radius: $cms-radius;
+    background: $cms-white;
+    box-shadow: $cms-shadow-xs;
+    overflow-y: auto;
+  }
+
+  &__content-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: rem(260);
+    padding: rem(32);
+    text-align: center;
+  }
+
+  // Edit panel (shown in content area)
+  &__edit {
+    padding: rem(24) rem(28);
+  }
+
+  &__edit-header {
+    display: flex;
+    align-items: center;
+    gap: rem(10);
+    margin-bottom: rem(4);
+  }
+
+  &__edit-heading {
+    font-size: rem(18);
+    font-weight: $cms-font-weight-medium;
+    line-height: rem(22);
+    color: $cms-text-default;
+  }
+
+  &__edit-badge {
+    @include wf-tag($cms-blue-02, $cms-blue-75);
+  }
+
+  &__edit-desc {
+    margin: 0 0 rem(24);
+    color: $cms-text-light;
+  }
+
+  &__edit-row {
+    margin-bottom: rem(20);
+
+    > label {
+      display: block;
+      margin-bottom: rem(6);
+      color: $cms-text-default;
+    }
+
+    input,
+    select,
+    textarea {
+      @include wf-form-control;
+    }
+
+    textarea {
+      resize: vertical;
+    }
+
+    select[multiple] {
+      min-height: rem(96);
+      padding: rem(4);
+    }
+
+    &--branch {
+      margin-bottom: rem(16);
+      padding-left: rem(12);
+      border-left: rem(2) solid $cms-border-default;
+    }
+  }
+
+  &__field-help {
+    margin: 0 0 rem(6);
+    color: $cms-text-light;
+  }
+
+  &__edit-divider {
+    height: rem(1);
+    margin: rem(20) 0;
+    background: $cms-border-light;
+  }
+
+  // Heading for a group of related controls, styled as a CMS H4.
+  &__edit-label {
+    margin: 0 0 rem(10);
+    font-size: rem(14);
+    font-weight: $cms-font-weight-medium;
+    line-height: rem(22);
+    color: $cms-text-default;
+  }
+
+  // Empty states
+  &__empty-title {
+    margin: 0 0 rem(6);
+    font-size: rem(16);
+    font-weight: $cms-font-weight-medium;
+    line-height: rem(22);
+    color: $cms-text-default;
+  }
+
+  &__empty-desc {
+    max-width: rem(420);
+    margin: 0;
+    color: $cms-text-light;
+  }
+}
+
+// !important guards: the CMS admin's global form CSS otherwise forces label
+// display:block and full-width checkbox inputs, which stacks the box above the
+// label. Keep the checkbox and its label on one centred row.
+.wf-builder__checkbox {
+  display: flex !important;
+  align-items: center;
+  gap: rem(8);
+  color: $cms-text-default;
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    width: rem(14) !important;
+    height: rem(14) !important;
+    min-width: rem(14) !important;
+    margin: 0 !important;
+    padding: 0;
+    flex: 0 0 auto;
+    accent-color: $cms-text-link;
+    cursor: pointer;
+  }
+}
+
+.wf-builder__transition-advanced {
+  margin-top: rem(8);
+
+  summary {
+    color: $cms-text-link;
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      color: $cms-text-link-hover;
+      text-decoration: underline;
+    }
+
+    @include wf-focus-ring(rem(1));
+  }
+
+  .wf-builder__edit-row {
+    margin: rem(8) 0 0;
+  }
+}
+
+// Compact searchable multi-select (group/user assignment). Chips + filter box,
+// with a scrollable filtered option list so long lists stay manageable.
+// Chips follow the CMS "Form field tags" component.
+.wf-ms {
+  position: relative;
+
+  // Beat `.wf-builder__edit-row input` (same specificity, later source
+  // order) so the search box and checkboxes size naturally.
+  input {
+    width: auto;
+  }
+
+  &__control {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: rem(6);
+    min-height: rem(38);
+    padding: rem(4) rem(6);
+    border: rem(1) solid $cms-border-input;
+    border-radius: $cms-radius;
+    background: $cms-white;
+    box-sizing: border-box;
+    cursor: text;
+    transition: border-color $transition-fast, box-shadow $transition-fast;
+  }
+
+  &--open &__control,
+  &__control:focus-within {
+    border-color: $cms-border-focus;
+    box-shadow: 0 0 0 rem(3) rgba($cms-border-focus, 0.25);
+  }
+
+  &__placeholder {
+    padding-left: rem(6);
+    color: $cms-grey-400;
+    font-style: italic;
+  }
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: rem(6);
+    padding: 0 rem(6) 0 rem(8);
+    border: rem(1) solid $cms-border-default;
+    border-radius: $cms-radius;
+    background: $cms-white;
+    color: $cms-text-default;
+    font-size: rem(12);
+    line-height: rem(22);
+  }
+
+  &__chip-remove {
+    display: inline-flex;
+    align-items: center;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: $cms-text-light;
+    font-size: rem(10);
+    cursor: pointer;
+
+    &:hover {
+      color: $cms-text-danger;
+    }
+
+    @include wf-focus-ring(rem(1));
+  }
+
+  // Doubled class beats the edit-row form-control styles so the filter box
+  // stays borderless inside the chip control.
+  &__input.wf-ms__input {
+    flex: 1 1 rem(96);
+    min-width: rem(96);
+    padding: rem(4) rem(6);
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+
+    &:focus {
+      box-shadow: none;
+    }
+  }
+
+  &__menu {
+    margin-top: rem(4);
+    max-height: rem(224);
+    overflow-y: auto;
+    border: rem(1) solid $cms-border-default;
+    border-radius: $cms-radius;
+    background: $cms-white;
+    box-shadow: $cms-shadow-s;
+  }
+
+  &__option {
+    display: flex !important;
+    align-items: center;
+    gap: rem(8);
+    min-height: rem(32);
+    margin: 0 !important;
+    padding: rem(6) rem(12);
+    border-bottom: rem(1) solid $cms-border-light;
+    color: $cms-text-default;
+    cursor: pointer;
+
+    &:last-child {
+      border-bottom: 0;
+    }
+
+    input[type="checkbox"] {
+      width: rem(14) !important;
+      height: rem(14) !important;
+      min-width: rem(14) !important;
+      margin: 0 !important;
+      padding: 0;
+      flex: 0 0 auto;
+      accent-color: $cms-text-link;
+      cursor: pointer;
+    }
+
+    span {
+      flex: 1 1 auto;
+    }
+
+    &:hover {
+      background: $cms-blue-02;
+    }
+  }
+
+  &__empty {
+    padding: rem(8) rem(12);
+    color: $cms-text-light;
+  }
+}

@@ -2,8 +2,10 @@
 
 namespace Symbiote\AdvancedWorkflow\Extensions;
 
+use SilverStripe\CMS\Controllers\CMSMain;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\FormAction;
@@ -26,6 +28,7 @@ use SilverStripe\Security\Security;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowActionInstance;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowDefinition;
 use Symbiote\AdvancedWorkflow\DataObjects\WorkflowInstance;
+use Symbiote\AdvancedWorkflow\Services\WorkflowApprovalService;
 use Symbiote\AdvancedWorkflow\Services\WorkflowService;
 use Symbiote\QueuedJobs\Services\AbstractQueuedJob;
 
@@ -126,12 +129,9 @@ class WorkflowApplicable extends Extension
             $this->updateFields($fields);
         }
 
-        // Instantiate a hidden form field to pass the triggered workflow definition through,
-        // allowing a dynamic form action.
-
-        $fields->push(HiddenField::create(
-            'TriggeredWorkflowID'
-        ));
+        // Carries the chosen definition to AdvancedWorkflowExtension::startworkflow()
+        // when a workflow is started from the edit form.
+        $fields->push(HiddenField::create('TriggeredWorkflowID'));
     }
 
     public function updateFields(FieldList $fields)
@@ -195,6 +195,10 @@ class WorkflowApplicable extends Extension
 
     protected function updateCMSActions(FieldList $actions)
     {
+        if ($this->rendersWorkflowPanel()) {
+            return;
+        }
+
         $active = $this->getWorkflowService()->getWorkflowFor($this->owner);
         $c = Controller::curr();
         if ($c && $c->hasExtension(AdvancedWorkflowExtension::class) && !$this->owner->isArchived()) {
@@ -284,6 +288,16 @@ class WorkflowApplicable extends Extension
                 }
             }
         }
+    }
+
+    /**
+     * The status panel holds the workflow buttons on the page edit form, so the
+     * action bar must not duplicate them there.
+     */
+    private function rendersWorkflowPanel(): bool
+    {
+        return Controller::curr() instanceof CMSMain
+            && $this->getWorkflowService()->rendersWorkflowPanelFor($this->owner);
     }
 
     protected function createActionMenu()
@@ -409,6 +423,14 @@ class WorkflowApplicable extends Extension
             if (!is_null($publish)) {
                 return $publish;
             }
+        }
+
+        // An approval lifts the workflow's own publish restriction only; the
+        // record's usual publish permissions still decide.
+        if ($this->getWorkflowService()->isWorkflowPanelEnabled()
+            && Injector::inst()->get(WorkflowApprovalService::class)->isCurrentContentApproved($this->owner)
+        ) {
+            return null;
         }
 
         // use definition to determine if publishing directly is allowed
